@@ -11,6 +11,7 @@ from sqlalchemy import and_, delete, func, literal, select
 from sqlalchemy.orm import Session
 
 from app.domain.matching import AttemptLine, MatchConfig, MatchResult, Route, compare, match
+from app.infra.achievements_service import sync_achievements
 from app.infra.models import Attempt, AttemptState, Track, TrackStatus, User, Visibility
 from app.infra.settings_repo import get_setting
 
@@ -142,6 +143,8 @@ def _upsert_attempt(
         attempt = Attempt(track_id=track.id)
         db.add(attempt)
     attempt.root_track_id = found.root.id
+    if state == AttemptState.active and attempt.state != AttemptState.active.value:
+        attempt.activated_at = datetime.now(UTC)
     attempt.state = state.value
     attempt.segment_time_s = r.segment_time_s
     attempt.hidden_time_s = r.hidden_time_s
@@ -156,6 +159,8 @@ def _upsert_attempt(
     attempt.length_ratio = r.length_ratio
     attempt.segment_distance_m = r.segment_distance_m
     attempt.trimmed = r.trimmed
+    db.flush()
+    sync_achievements(db, track)
     return attempt
 
 
@@ -189,6 +194,8 @@ def _leave_group(db: Session, track: Track, state: AttemptState) -> None:
     attempt = attempt_row(db, track.id)
     if attempt is not None:
         attempt.state = state.value
+    db.flush()
+    sync_achievements(db, track)
 
 
 def sync_group(db: Session, track: Track) -> None:
@@ -216,6 +223,7 @@ def sync_group(db: Session, track: Track) -> None:
     if found is None:
         _leave_group(db, track, AttemptState.detached)
         db.execute(delete(Attempt).where(Attempt.track_id == track.id))
+        sync_achievements(db, track)
         return
     track.parent_track_id = found.root.id
     _upsert_attempt(db, track, found, AttemptState.active, cfg)
@@ -243,6 +251,7 @@ def promote_next_root(db: Session, root: Track) -> Track | None:
     new_root.parent_track_id = None
     db.execute(delete(Attempt).where(Attempt.track_id == new_root.id))
     db.flush()
+    sync_achievements(db, new_root)  # исходный трек ачивок не получает
     cfg = load_config(db)
     for track in rest:
         result = evaluate(db, new_root, track, cfg)
@@ -254,16 +263,18 @@ def promote_next_root(db: Session, root: Track) -> Track | None:
         else:
             track.parent_track_id = None
             db.execute(delete(Attempt).where(Attempt.track_id == track.id))
+            sync_achievements(db, track)
     return new_root
 
 
 def hide_by_moderator(db: Session, track: Track) -> None:
-    """Скрытие модератором (интерфейс модерации — этап 2)."""
+    """Скрытие модератором (интерфейс модерации — этап 2): ачивки этого трека отзываются."""
     track.hidden_by_moderator = True
     if has_group(db, track.id):
         promote_next_root(db, track)
     else:
         _leave_group(db, track, AttemptState.detached)
+    sync_achievements(db, track)
     db.commit()
 
 

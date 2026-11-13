@@ -1,14 +1,16 @@
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, model_validator
 
 from app.api.auth import REFRESH_COOKIE
-from app.api.deps import ConfigDep, CurrentUser, DbDep
+from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
 from app.domain.privacy import RadiusBounds, RadiusOutOfRangeError, validate_hide_radius
 from app.infra import tracks_repo
 from app.infra.account_cleanup import run_cleanups
+from app.infra.achievements_service import new_attempts, user_showcase
 from app.infra.matching_service import before_account_deletion
 from app.infra.models import User
 from app.infra.queue import TaskQueue, get_queue
@@ -81,6 +83,7 @@ def _own(db: DbDep, user: User) -> OwnProfile:
         role=user.role,
         home=HomePoint(lat=home[0], lon=home[1]) if home else None,
         hide_radius_m=user.hide_radius_m,
+        new_attempts=sum(new_attempts(db, user.id).values()),
     )
 
 
@@ -137,3 +140,39 @@ def read_profile(user_id: uuid.UUID, db: DbDep) -> PublicProfile:
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь не найден")
     return _public(db, user)
+
+
+class ShowcaseItem(BaseModel):
+    track_id: uuid.UUID
+    title: str | None
+    awarded_at: datetime
+
+
+class ShowcaseEntry(BaseModel):
+    code: str
+    title: str
+    description: str
+    icon: str
+    count: int
+    items: list[ShowcaseItem]
+
+
+@router.get("/users/{user_id}/achievements", responses={404: {"description": "Нет бегуна"}})
+def user_achievements(user_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> list[ShowcaseEntry]:
+    if get_user(db, user_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь не найден")
+    own = viewer is not None and viewer.id == user_id
+    return [
+        ShowcaseEntry(
+            code=e["achievement"].code,
+            title=e["achievement"].title,
+            description=e["achievement"].description,
+            icon=e["achievement"].icon,
+            count=len(e["items"]),
+            items=[
+                ShowcaseItem(track_id=i["track_id"], title=i["title"], awarded_at=i["at"])
+                for i in e["items"]
+            ],
+        )
+        for e in user_showcase(db, user_id, public_only=not own)
+    ]

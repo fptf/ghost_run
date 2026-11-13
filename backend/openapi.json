@@ -1,6 +1,29 @@
 {
   "components": {
     "schemas": {
+      "AchievementBadge": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "icon"
+        ],
+        "title": "AchievementBadge",
+        "type": "object"
+      },
       "AuthConfig": {
         "properties": {
           "dev_login_enabled": {
@@ -989,6 +1012,107 @@
         "title": "PublicProfile",
         "type": "object"
       },
+      "ResultAchievement": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "icon"
+        ],
+        "title": "ResultAchievement",
+        "type": "object"
+      },
+      "ResultResponse": {
+        "properties": {
+          "achievements": {
+            "items": {
+              "$ref": "#/components/schemas/ResultAchievement"
+            },
+            "title": "Achievements",
+            "type": "array"
+          },
+          "best_time_s": {
+            "title": "Best Time S",
+            "type": "number"
+          },
+          "by_author": {
+            "title": "By Author",
+            "type": "boolean"
+          },
+          "diff_s": {
+            "title": "Diff S",
+            "type": "number"
+          },
+          "gap_to_best_s": {
+            "title": "Gap To Best S",
+            "type": "number"
+          },
+          "outcome": {
+            "enum": [
+              "beat",
+              "slower",
+              "equal"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          },
+          "result_time_s": {
+            "title": "Result Time S",
+            "type": "number"
+          },
+          "root_time_s": {
+            "title": "Root Time S",
+            "type": "number"
+          },
+          "route": {
+            "$ref": "#/components/schemas/RootRef"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GroupRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "runners": {
+            "title": "Runners",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "outcome",
+          "route",
+          "result_time_s",
+          "root_time_s",
+          "diff_s",
+          "place",
+          "runners",
+          "best_time_s",
+          "gap_to_best_s",
+          "by_author",
+          "rows",
+          "achievements"
+        ],
+        "title": "ResultResponse",
+        "type": "object"
+      },
       "RootRef": {
         "properties": {
           "author": {
@@ -1179,6 +1303,79 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "ShowcaseEntry": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShowcaseItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "description",
+          "icon",
+          "count",
+          "items"
+        ],
+        "title": "ShowcaseEntry",
+        "type": "object"
+      },
+      "ShowcaseItem": {
+        "properties": {
+          "awarded_at": {
+            "format": "date-time",
+            "title": "Awarded At",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "track_id": {
+            "format": "uuid",
+            "title": "Track Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "track_id",
+          "title",
+          "awarded_at"
+        ],
+        "title": "ShowcaseItem",
+        "type": "object"
+      },
       "Split": {
         "properties": {
           "distance_m": {
@@ -1233,6 +1430,13 @@
       },
       "TrackDetail": {
         "properties": {
+          "achievements": {
+            "items": {
+              "$ref": "#/components/schemas/AchievementBadge"
+            },
+            "title": "Achievements",
+            "type": "array"
+          },
           "attempt_of": {
             "anyOf": [
               {
@@ -1368,6 +1572,11 @@
             ],
             "title": "Moving Time S"
           },
+          "new_attempts": {
+            "default": 0,
+            "title": "New Attempts",
+            "type": "integer"
+          },
           "owner": {
             "anyOf": [
               {
@@ -1494,7 +1703,8 @@
           "km_marks",
           "match",
           "attempt_of",
-          "group_runners"
+          "group_runners",
+          "achievements"
         ],
         "title": "TrackDetail",
         "type": "object"
@@ -1543,6 +1753,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "new_attempts": {
+            "default": 0,
+            "title": "New Attempts",
+            "type": "integer"
           },
           "reject_message": {
             "anyOf": [
@@ -3018,6 +3233,57 @@
         ]
       }
     },
+    "/tracks/{track_id}/result": {
+      "get": {
+        "operationId": "read_result_tracks__track_id__result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "track_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Track Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Нет результата"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Result",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
     "/users/{user_id}": {
       "get": {
         "operationId": "read_profile_users__user_id__get",
@@ -3059,6 +3325,61 @@
           }
         },
         "summary": "Read Profile",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{user_id}/achievements": {
+      "get": {
+        "operationId": "user_achievements_users__user_id__achievements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShowcaseEntry"
+                  },
+                  "title": "Response User Achievements Users  User Id  Achievements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Нет бегуна"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "User Achievements",
         "tags": [
           "users"
         ]

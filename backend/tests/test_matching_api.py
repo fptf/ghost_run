@@ -231,9 +231,10 @@ def test_root_made_private_closes_group(client: TestClient) -> None:
 def test_equal_result(client: TestClient) -> None:
     author, runner, where = dev_login(client), dev_login(client), place()
     pts = fixture_points(ROOT)
-    root = published(client, author, gpx(pts, where))
-    total = root["total_time_s"]
-    attempt = published(client, runner, gpx(pts, where, scale=(total + 0.6) / total, jitter_m=1))
+    published(client, author, gpx(pts, where))
+    # тот же путь и время от другого бегуна — разница 0 с (время в GPX целое; порог 0,6 с
+    # проверен в доменном тесте сравнения)
+    attempt = published(client, runner, gpx(pts, where))
     m = attempt["match"]
     assert m["state"] == "active" and m["equal"] is True and m["beat"] is False
     assert abs(m["diff_s"]) < 1

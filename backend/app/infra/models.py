@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -125,6 +126,8 @@ class Track(Base):
     root_closed: Mapped[bool] = mapped_column(Boolean, default=False)  # не принимает попыток
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     hidden_by_moderator: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Когда автор маршрута последний раз открывал группу — для счётчика новых попыток.
+    attempts_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -187,4 +190,26 @@ class Attempt(Base):
     length_ratio: Mapped[float] = mapped_column(Float)
     segment_distance_m: Mapped[float] = mapped_column(Float)
     trimmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(64), unique=True)
+    title: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str] = mapped_column(Text)
+    icon: Mapped[str] = mapped_column(String(32))
+
+
+class UserAchievement(Base):
+    __tablename__ = "user_achievements"
+    __table_args__ = (UniqueConstraint("achievement_id", "track_id", name="user_achievement_once"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    achievement_id: Mapped[int] = mapped_column(ForeignKey("achievements.id", ondelete="CASCADE"))
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    awarded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -11,6 +11,7 @@ from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
 from app.domain.tracks.model import REJECT_MESSAGES, RejectReason
 from app.domain.tracks.parsers import detect_format
 from app.infra import tracks_repo
+from app.infra.achievements_service import new_attempts, track_achievements
 from app.infra.matching_service import (
     attempt_row,
     detach,
@@ -84,6 +85,7 @@ class TrackSummary(BaseModel):
     avg_pace_s_per_km: float | None
     category: str | None
     created_at: datetime
+    new_attempts: int = 0  # новые попытки других бегунов (только в «Моих треках»)
 
 
 class OwnerExtras(BaseModel):
@@ -113,6 +115,12 @@ class MatchInfo(BaseModel):
     hidden_time_s: float
 
 
+class AchievementBadge(BaseModel):
+    code: str
+    title: str
+    icon: str
+
+
 class KmMark(BaseModel):
     km: int
     lon: float
@@ -134,6 +142,7 @@ class TrackDetail(TrackSummary):
     match: MatchInfo | None  # только автору
     attempt_of: RootRef | None  # трек — попытка в группе этого маршрута
     group_runners: int  # бегунов в группе маршрута этого трека (с автором)
+    achievements: list[AchievementBadge]  # полученные этой попыткой
 
 
 class TrackUpdate(BaseModel):
@@ -213,6 +222,10 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
         match=_match_info(db, track) if is_owner else None,
         attempt_of=_root_ref(db, track.parent_track_id) if track.parent_track_id else None,
         group_runners=len(group_rows(db, root_of(db, track))) if track.status == "published" else 0,
+        achievements=[
+            AchievementBadge(code=a.code, title=a.title, icon=a.icon)
+            for a in track_achievements(db, track.id)
+        ],
     )
 
 
@@ -334,7 +347,13 @@ def read_track(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> TrackDet
 
 @router.get("/me/tracks")
 def my_tracks(user: CurrentUser, db: DbDep) -> list[TrackSummary]:
-    return [_summary(t) for t in tracks_repo.user_tracks(db, user.id, public_only=False)]
+    fresh = new_attempts(db, user.id)
+    out = []
+    for t in tracks_repo.user_tracks(db, user.id, public_only=False):
+        item = _summary(t)
+        item.new_attempts = fresh.get(t.id, 0)
+        out.append(item)
+    return out
 
 
 @router.get("/users/{user_id}/tracks")

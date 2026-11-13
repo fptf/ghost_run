@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
@@ -11,8 +11,10 @@ from app.api.deps import CurrentUser, DbDep, OptionalUser
 from app.api.tracks import Author, LineGeometry, RootRef, _root_ref
 from app.domain.matching import compare
 from app.infra import tracks_repo
-from app.infra.matching_service import evaluate, group_rows, load_config, root_of
+from app.infra.achievements_service import track_achievements
+from app.infra.matching_service import attempt_row, evaluate, group_rows, load_config, root_of
 from app.infra.models import Track, TrackStatus
+from app.infra.settings_repo import get_setting
 
 router = APIRouter(tags=["groups"])
 
@@ -52,6 +54,10 @@ def _group_track(db: DbDep, track_id: uuid.UUID, viewer_id: uuid.UUID | None) ->
 @router.get("/tracks/{track_id}/group", responses={404: {"description": "Трек не найден"}})
 def read_group(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> GroupResponse:
     root = _group_track(db, track_id, viewer.id if viewer else None)
+    if viewer is not None and viewer.id == root.user_id:
+        # автор открыл группу своего маршрута — новые попытки просмотрены
+        root.attempts_seen_at = datetime.now(UTC)
+        db.commit()
     ref = _root_ref(db, root.id)
     assert ref is not None
     distance = root.distance_m or 1.0
@@ -180,3 +186,62 @@ def _geom() -> Any:
     from geoalchemy2 import Geometry
 
     return Geometry(srid=4326)
+
+
+class ResultAchievement(BaseModel):
+    code: str
+    title: str
+    icon: str
+
+
+class ResultResponse(BaseModel):
+    outcome: Literal["beat", "slower", "equal"]
+    route: RootRef
+    result_time_s: float
+    root_time_s: float
+    diff_s: float
+    place: int
+    runners: int
+    best_time_s: float
+    gap_to_best_s: float  # 0, если результат лучший в группе
+    by_author: bool
+    rows: list[GroupRow]
+    achievements: list[ResultAchievement]
+
+
+@router.get("/tracks/{track_id}/result", responses={404: {"description": "Нет результата"}})
+def read_result(track_id: uuid.UUID, user: CurrentUser, db: DbDep) -> ResultResponse:
+    track = db.get(Track, track_id)
+    if track is None or track.user_id != user.id or track.deleted_at is not None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не найден")
+    attempt = attempt_row(db, track.id)
+    if attempt is None or attempt.state != "active" or track.parent_track_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не засчитан как попытка")
+    root = db.get(Track, track.parent_track_id)
+    assert root is not None
+    group = read_group(root.id, db, user)
+    ref = _root_ref(db, root.id)
+    assert ref is not None
+    mine = next((r for r in group.rows if r.is_viewer), None)
+    tie = float(get_setting(db, "comparison.tie_threshold_s"))
+    outcome: Literal["beat", "slower", "equal"] = (
+        "equal" if abs(attempt.diff_s) < tie else "beat" if attempt.diff_s < 0 else "slower"
+    )
+    best = group.rows[0].time_s if group.rows else attempt.result_time_s
+    return ResultResponse(
+        outcome=outcome,
+        route=ref,
+        result_time_s=attempt.result_time_s,
+        root_time_s=root.total_time_s or 0,
+        diff_s=attempt.diff_s,
+        place=mine.place if mine else 0,
+        runners=group.runners,
+        best_time_s=best,
+        gap_to_best_s=max(0.0, attempt.result_time_s - best),
+        by_author=attempt.by_author,
+        rows=group.rows,
+        achievements=[
+            ResultAchievement(code=a.code, title=a.title, icon=a.icon)
+            for a in track_achievements(db, track.id)
+        ],
+    )
