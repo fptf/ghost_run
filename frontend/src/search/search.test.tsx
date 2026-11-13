@@ -63,6 +63,42 @@ function searchResponse(
   });
 }
 
+function groupResponse() {
+  return json({
+    root: { id: TRACK, title: "Набережная до маяка", author: AUTHOR },
+    root_distance_m: 5200,
+    runners: 2,
+    rows: [
+      {
+        place: 1,
+        runner: { id: "r1", name: "Ирина К.", avatar_url: null },
+        track_id: "a1",
+        time_s: 1421,
+        pace_s_per_km: 273,
+        date: null,
+        beat: true,
+        is_author: false,
+        is_root: false,
+        runs: 1,
+        is_viewer: false,
+      },
+      {
+        place: 2,
+        runner: AUTHOR,
+        track_id: TRACK,
+        time_s: 1450,
+        pace_s_per_km: 279,
+        date: null,
+        beat: false,
+        is_author: true,
+        is_root: true,
+        runs: 1,
+        is_viewer: false,
+      },
+    ],
+  });
+}
+
 function detail() {
   return {
     id: TRACK,
@@ -94,6 +130,9 @@ function detail() {
     is_owner: false,
     owner: null,
     km_marks: [{ km: 1, lon: 131.905, lat: 43.105 }],
+    match: null,
+    attempt_of: null,
+    group_runners: 2,
   };
 }
 
@@ -176,12 +215,19 @@ describe("Главная: поиск по карте", () => {
       "POST /auth/refresh": NO_SESSION,
       "GET /tracks/search": () => searchResponse(),
       [`GET /tracks/${TRACK}`]: () => json(detail()),
+      [`GET /tracks/${TRACK}/group`]: groupResponse,
     });
     renderApp("/");
     fireEvent.click(await screen.findByText("Набережная до маяка"));
     expect(await screen.findByRole("heading", { name: "Набережная до маяка" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Скачать GPX" })).toBeInTheDocument();
-    expect(screen.getByText("Группа маршрута")).toBeInTheDocument();
+    expect(await screen.findByText("Группа маршрута")).toBeInTheDocument();
+    expect(screen.getByText("Ирина К.")).toBeInTheDocument();
+    expect(screen.getByText("превзошёл")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Проверить мою пробежку" })).toHaveAttribute(
+      "href",
+      `/tracks/${TRACK}/check`,
+    );
     expect(mapProps.last?.selectedId).toBe(TRACK);
     fireEvent.click(screen.getByRole("button", { name: /К списку маршрутов/ }));
     expect(await screen.findByText("Круг по парку")).toBeInTheDocument();

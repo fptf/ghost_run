@@ -16,6 +16,7 @@ import { UploadPage } from "./pages/UploadPage";
 // Страницы с картой подгружаются отдельно: шапка и навигация не ждут MapLibre (~1 МБ).
 const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
 const TrackPage = lazy(() => import("./pages/TrackPage").then((m) => ({ default: m.TrackPage })));
+const CheckPage = lazy(() => import("./pages/CheckPage").then((m) => ({ default: m.CheckPage })));
 const TrackEditPage = lazy(() =>
   import("./pages/TrackEditPage").then((m) => ({ default: m.TrackEditPage })),
 );
@@ -41,6 +42,14 @@ export function App({ queryClient = new QueryClient() }: { queryClient?: QueryCl
               <Route path="/login" element={<LoginPage />} />
               <Route path="/users/:userId" element={<PublicProfilePage />} />
               <Route path="/tracks/:trackId" element={<TrackPage />} />
+              <Route
+                path="/tracks/:trackId/check"
+                element={
+                  <RequireAuth>
+                    <CheckPage />
+                  </RequireAuth>
+                }
+              />
               <Route
                 path="/tracks/:trackId/edit"
                 element={

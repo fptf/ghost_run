@@ -95,6 +95,12 @@ cd backend && uv run python ../tools/load_dump.py ../tracks-dump        # пов
 cd backend && uv run python ../tools/load_dump.py ../tracks-dump --reset  # после перегенерации
 ```
 
+Сопоставление маршрутов (раздел 5 ТЗ) идёт автоматически при обработке и публикации трека.
+Чтобы разложить по группам треки, загруженные раньше (например, после загрузки дампа):
+```bash
+docker compose exec api python -m app.scripts.rematch_all
+```
+
 Настройки (пороги сопоставления, категории, популярность, лимиты) лежат в таблице `settings`
 и читаются без перезапуска.
 

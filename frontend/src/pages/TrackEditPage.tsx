@@ -8,6 +8,7 @@ import { api } from "../api/client";
 import { BackButton } from "../components/BackButton";
 import { uploadPhoto, useTrack } from "../tracks/api";
 import type { TrackDetail } from "../tracks/api";
+import { MatchPlaque } from "../tracks/MatchPlaque";
 import { Photos } from "../tracks/Photos";
 import { TrackSummaryCard } from "../tracks/TrackSummaryCard";
 import { TrackNotFound } from "./TrackPage";
@@ -42,7 +43,7 @@ function EditForm({ track }: { track: TrackDetail }) {
     setSaving(true);
     const { data, error: err } = await api.PATCH("/tracks/{track_id}", {
       params: { path: { track_id: track.id } },
-      body: { title, description, visibility, publish: true },
+      body: { title, description, visibility, publish: true, detach: false },
     });
     setSaving(false);
     if (!data) {
@@ -85,6 +86,7 @@ function EditForm({ track }: { track: TrackDetail }) {
 
   return (
     <>
+      <MatchPlaque track={track} visibility={visibility} />
       <form className="card" onSubmit={onSubmit}>
         <label className="field">
           {t("track.title")}

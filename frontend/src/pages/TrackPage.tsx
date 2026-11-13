@@ -5,6 +5,8 @@ import { Avatar } from "../components/Avatar";
 import { BackButton } from "../components/BackButton";
 import { CATEGORY_LABELS } from "../lib/format";
 import { useTrack } from "../tracks/api";
+import { useAuth } from "../auth/useAuth";
+import { GroupTable } from "../tracks/GroupTable";
 import { Photos } from "../tracks/Photos";
 import { TrackSummaryCard } from "../tracks/TrackSummaryCard";
 import { useGpxDownload } from "../tracks/useGpxDownload";
@@ -30,6 +32,7 @@ export function TrackPage() {
   const track = useTrack(trackId, { poll: true });
   const navigate = useNavigate();
   const download = useGpxDownload();
+  const { status } = useAuth();
   const flash = (useLocation().state as { flash?: "published" | "saved" } | null)?.flash;
 
   if (track.isPending) {
@@ -86,6 +89,15 @@ export function TrackPage() {
           </Link>
         </div>
       )}
+      {tr.attempt_of && (
+        <p className="notice notice--info">
+          {t("match.attemptOf")}{" "}
+          <Link to={`/tracks/${tr.attempt_of.id}`}>
+            «{tr.attempt_of.title ?? t("track.untitled")}»
+          </Link>{" "}
+          · {tr.attempt_of.author.name}
+        </p>
+      )}
       {tr.status === "processing" && <p className="notice notice--info">{t("track.processing")}</p>}
       {tr.status === "rejected" && (
         <p className="notice notice--error">{tr.reject_message ?? t("upload.failed")}</p>
@@ -105,7 +117,7 @@ export function TrackPage() {
                 >
                   {t("track.downloadGpx")}
                 </button>
-                {tr.status === "published" && tr.visibility === "public" && (
+                {tr.status === "published" && tr.visibility === "public" && !tr.attempt_of && (
                   <button
                     type="button"
                     className="btn btn--secondary btn--sm"
@@ -114,9 +126,20 @@ export function TrackPage() {
                     {t("track.showOnMap")}
                   </button>
                 )}
+                {tr.status === "published" && !tr.attempt_of && (
+                  <Link
+                    to={
+                      status === "authenticated"
+                        ? `/tracks/${tr.id}/check`
+                        : `/login?next=${encodeURIComponent(`/tracks/${tr.id}/check`)}`
+                    }
+                    className="btn btn--secondary btn--sm"
+                  >
+                    {t("check.button")}
+                  </Link>
+                )}
               </div>
-              <h3 className="card__title">{t("track.group")}</h3>
-              <div className="empty">{t("search.onlyAuthor")}</div>
+              {tr.status === "published" && <GroupTable trackId={tr.id} />}
             </section>
           )}
           {(tr.description || tr.photos.length > 0) && (

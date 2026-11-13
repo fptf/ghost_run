@@ -5,6 +5,7 @@ import { Avatar } from "../components/Avatar";
 import { PaceChart } from "../components/PaceChart";
 import { CATEGORY_LABELS, formatDate } from "../lib/format";
 import type { TrackDetail } from "../tracks/api";
+import { GroupTable } from "../tracks/GroupTable";
 import { TrackMetrics } from "../tracks/TrackSummaryCard";
 import { useGpxDownload } from "../tracks/useGpxDownload";
 
@@ -39,14 +40,14 @@ export function TrackCardPanel({ track, onBack }: { track: TrackDetail; onBack: 
         >
           {t("track.downloadGpx")}
         </button>
-        <Link to={`/tracks/${track.id}`} className="btn btn--secondary btn--sm">
+        <Link to={`/tracks/${track.id}/check`} className="btn btn--secondary btn--sm">
+          {t("check.button")}
+        </Link>
+        <Link to={`/tracks/${track.id}`} className="btn btn--ghost btn--sm">
           {t("search.openCard")}
         </Link>
       </div>
-      <section className="stack">
-        <h3 className="card__title">{t("track.group")}</h3>
-        <div className="empty">{t("search.onlyAuthor")}</div>
-      </section>
+      <GroupTable trackId={track.id} />
     </article>
   );
 }

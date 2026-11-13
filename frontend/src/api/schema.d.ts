@@ -195,6 +195,23 @@ export interface paths {
     patch: operations["update_track_tracks__track_id__patch"];
     trace?: never;
   };
+  "/tracks/{track_id}/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Check Run */
+    post: operations["check_run_tracks__track_id__check_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/tracks/{track_id}/gpx": {
     parameters: {
       query?: never;
@@ -204,6 +221,23 @@ export interface paths {
     };
     /** Download Gpx */
     get: operations["download_gpx_tracks__track_id__gpx_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tracks/{track_id}/group": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read Group */
+    get: operations["read_group_tracks__track_id__group_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -314,6 +348,56 @@ export interface components {
       /** File */
       file: string;
     };
+    /** CheckRequest */
+    CheckRequest: {
+      /**
+       * Track Id
+       * Format: uuid
+       */
+      track_id: string;
+    };
+    /** CheckResponse */
+    CheckResponse: {
+      /** Corridor */
+      corridor: {
+        [key: string]: unknown;
+      } | null;
+      deviation: components["schemas"]["Deviation"] | null;
+      /** Diff S */
+      diff_s: number | null;
+      /** Matched */
+      matched: boolean;
+      /** Result Time S */
+      result_time_s: number | null;
+      route: components["schemas"]["RootRef"];
+      route_line: components["schemas"]["LineGeometry"] | null;
+      /** Rules */
+      rules: components["schemas"]["CheckRule"][];
+      /**
+       * Track Id
+       * Format: uuid
+       */
+      track_id: string;
+      track_line: components["schemas"]["LineGeometry"] | null;
+      /** Track Started At */
+      track_started_at: string | null;
+      /** Track Title */
+      track_title: string | null;
+    };
+    /** CheckRule */
+    CheckRule: {
+      /**
+       * Code
+       * @enum {string}
+       */
+      code: "start" | "finish" | "corridor" | "direction" | "length";
+      /** Ok */
+      ok: boolean;
+      /** Required */
+      required: number;
+      /** Value */
+      value: number;
+    };
     /** Cluster */
     Cluster: {
       /** Count */
@@ -333,10 +417,56 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** Deviation */
+    Deviation: {
+      /** Km */
+      km: number;
+      /** Lat */
+      lat: number;
+      /** Lon */
+      lon: number;
+    };
     /** GoogleSignIn */
     GoogleSignIn: {
       /** Id Token */
       id_token: string;
+    };
+    /** GroupResponse */
+    GroupResponse: {
+      root: components["schemas"]["RootRef"];
+      /** Root Distance M */
+      root_distance_m: number;
+      /** Rows */
+      rows: components["schemas"]["GroupRow"][];
+      /** Runners */
+      runners: number;
+    };
+    /** GroupRow */
+    GroupRow: {
+      /** Beat */
+      beat: boolean;
+      /** Date */
+      date: string | null;
+      /** Is Author */
+      is_author: boolean;
+      /** Is Root */
+      is_root: boolean;
+      /** Is Viewer */
+      is_viewer: boolean;
+      /** Pace S Per Km */
+      pace_s_per_km: number;
+      /** Place */
+      place: number;
+      runner: components["schemas"]["Author"];
+      /** Runs */
+      runs: number;
+      /** Time S */
+      time_s: number;
+      /**
+       * Track Id
+       * Format: uuid
+       */
+      track_id: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -414,6 +544,34 @@ export interface components {
        * @constant
        */
       type: "LineString";
+    };
+    /**
+     * MatchInfo
+     * @description Совпадение с маршрутом — автору трека (плашка в превью и на просмотре).
+     */
+    MatchInfo: {
+      /** Beat */
+      beat: boolean;
+      /** By Author */
+      by_author: boolean;
+      /** Diff S */
+      diff_s: number;
+      /** Equal */
+      equal: boolean;
+      /** Hidden Time S */
+      hidden_time_s: number;
+      /** Result Time S */
+      result_time_s: number;
+      root: components["schemas"]["RootRef"];
+      /** Segment Distance M */
+      segment_distance_m: number;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "pending" | "active" | "detached";
+      /** Trimmed */
+      trimmed: boolean;
     };
     /** OwnProfile */
     OwnProfile: {
@@ -507,6 +665,17 @@ export interface components {
       name: string;
       stats: components["schemas"]["ProfileStats"];
     };
+    /** RootRef */
+    RootRef: {
+      author: components["schemas"]["Author"];
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string | null;
+    };
     /** SearchItem */
     SearchItem: {
       /** Attempts Count */
@@ -580,6 +749,7 @@ export interface components {
     };
     /** TrackDetail */
     TrackDetail: {
+      attempt_of: components["schemas"]["RootRef"] | null;
       author: components["schemas"]["Author"];
       /** Avg Pace S Per Km */
       avg_pace_s_per_km: number | null;
@@ -597,6 +767,8 @@ export interface components {
       /** Elevation Gain M */
       elevation_gain_m: number | null;
       geometry: components["schemas"]["LineGeometry"] | null;
+      /** Group Runners */
+      group_runners: number;
       /** Has Elevation */
       has_elevation: boolean | null;
       /**
@@ -608,6 +780,7 @@ export interface components {
       is_owner: boolean;
       /** Km Marks */
       km_marks: components["schemas"]["KmMark"][];
+      match: components["schemas"]["MatchInfo"] | null;
       /** Moving Time S */
       moving_time_s: number | null;
       owner: components["schemas"]["OwnerExtras"] | null;
@@ -679,6 +852,11 @@ export interface components {
     TrackUpdate: {
       /** Description */
       description?: string | null;
+      /**
+       * Detach
+       * @default false
+       */
+      detach: boolean;
       /**
        * Publish
        * @default false
@@ -1238,6 +1416,55 @@ export interface operations {
       };
     };
   };
+  check_run_tracks__track_id__check_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CheckRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CheckResponse"];
+        };
+      };
+      /** @description Нет маршрута или трека */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Не готов */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   download_gpx_tracks__track_id__gpx_get: {
     parameters: {
       query?: never;
@@ -1259,6 +1486,44 @@ export interface operations {
         };
       };
       /** @description Нет трека */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  read_group_tracks__track_id__group_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GroupResponse"];
+        };
+      };
+      /** @description Трек не найден */
       404: {
         headers: {
           [name: string]: unknown;

@@ -45,3 +45,15 @@ export const CATEGORY_LABELS: Record<string, string> = {
   "21": "21 км",
   "21+": "Более 21 км",
 };
+
+/** Разница во времени без знака: «18 с», «1:05». */
+export function formatDiff(seconds: number): string {
+  const s = Math.round(Math.abs(seconds));
+  return s < 60 ? `${s} с` : formatDuration(s);
+}
+
+/** «12 ноября» — без года, как в макетах. */
+export function formatDayMonth(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
