@@ -34,7 +34,7 @@ function Processing({
   useEffect(() => {
     if (status === "draft" || status === "published") {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
-      navigate(`/tracks/${trackId}`, { replace: true });
+      navigate(`/tracks/${trackId}/edit`, { replace: true });
     }
     if (status === "rejected") onRejected(track.data?.reject_message ?? t("upload.failed"));
   }, [status, trackId, navigate, onRejected, track.data, t, queryClient]);

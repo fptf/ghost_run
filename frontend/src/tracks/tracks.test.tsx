@@ -47,7 +47,7 @@ function track(overrides: Record<string, unknown> = {}) {
     moving_time_s: 1700,
     elevation_gain_m: 41,
     has_elevation: true,
-    splits: [1, 2, 3, 4, 5, 6].map((idx) => ({ idx, distance_m: 1000, time_s: 280 + idx })),
+    splits: [1, 2, 3, 4, 5, 6].map((idx) => ({ idx, distance_m: 1000, time_s: 300 + idx })),
     author: { id: USER_ID, name: "Анна", avatar_url: null },
     geometry: {
       type: "LineString",
@@ -176,15 +176,21 @@ describe("Превью", () => {
       [`GET /tracks/${TRACK_ID}`]: () => json(track()),
       [`PATCH /tracks/${TRACK_ID}`]: async (req) => {
         patched = await req.json();
-        return json(track({ status: "published", visibility: "link" }));
+        return json(track({ status: "published", visibility: "link", title: "Набережная" }));
       },
     });
-    renderApp(`/tracks/${TRACK_ID}`);
+    renderApp(`/tracks/${TRACK_ID}/edit`);
     fireEvent.click(await screen.findByRole("radio", { name: "По ссылке" }));
     fireEvent.change(screen.getByLabelText("Название"), { target: { value: "Набережная" } });
     fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
 
+    // Форма закрывается — открывается просмотр трека.
     expect(await screen.findByText("Трек опубликован")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Опубликовать" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Редактировать" })).toHaveAttribute(
+      "href",
+      `/tracks/${TRACK_ID}/edit`,
+    );
     expect(patched).toMatchObject({ title: "Набережная", visibility: "link", publish: true });
   });
 
@@ -200,7 +206,7 @@ describe("Превью", () => {
           }),
         ),
     });
-    renderApp(`/tracks/${TRACK_ID}`);
+    renderApp(`/tracks/${TRACK_ID}/edit`);
     expect(await screen.findByRole("radio", { name: "Публичный" })).toBeDisabled();
     expect(screen.getByRole("radio", { name: "Приватный" })).toHaveAttribute(
       "aria-checked",
@@ -228,5 +234,47 @@ describe("Превью", () => {
     expect(screen.getByRole("link", { name: /Анна/ })).toHaveAttribute("href", `/users/${USER_ID}`);
     expect(screen.queryByRole("button", { name: "Опубликовать" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText(/вокруг дома/)).not.toBeInTheDocument());
+  });
+});
+
+describe("Навигация трека", () => {
+  it("с формы можно уйти кнопкой «Назад» — на просмотр трека", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": ME,
+      [`GET /tracks/${TRACK_ID}`]: () => json(track({ status: "published", visibility: "public" })),
+    });
+    renderApp(`/tracks/${TRACK_ID}/edit`);
+    expect(
+      await screen.findByRole("heading", { name: "Редактирование трека" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Назад" }));
+    expect(await screen.findByRole("link", { name: "Редактировать" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+  });
+
+  it("черновик на просмотре предлагает опубликовать", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": ME,
+      [`GET /tracks/${TRACK_ID}`]: () => json(track()),
+    });
+    renderApp(`/tracks/${TRACK_ID}`);
+    expect(await screen.findByText("Черновик — трек видите только вы.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Опубликовать" })).toHaveAttribute(
+      "href",
+      `/tracks/${TRACK_ID}/edit`,
+    );
+  });
+
+  it("график темпа подписывает значения", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": ME,
+      [`GET /tracks/${TRACK_ID}`]: () => json(track({ status: "published", visibility: "public" })),
+    });
+    renderApp(`/tracks/${TRACK_ID}`);
+    expect(await screen.findByText("5:01")).toBeInTheDocument(); // 1 км: 301 с
+    expect(screen.getByText("5:06")).toBeInTheDocument(); // 6 км: 306 с
   });
 });

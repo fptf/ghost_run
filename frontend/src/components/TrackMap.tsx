@@ -3,7 +3,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
 // Vite обрабатывает воркер как воркер (без клиента HMR) и в dev, и в сборке.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
-import type { GeoJSONSource, LngLatBoundsLike } from "maplibre-gl";
+import type { LngLatBoundsLike } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 /** Векторные тайлы OpenFreeMap: бесплатно, без ключа. Смена провайдера — только этот URL. */
@@ -59,24 +59,35 @@ function lineFeature(coords: Coords | null | undefined) {
   };
 }
 
+const FIT_PADDING = { top: 32, right: 48, bottom: 64, left: 32 };
+
 export function TrackMap({ line, fullLine, zone, label }: TrackMapProps) {
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!container.current) return;
+    const zoneRing = zone ? circle(zone.lat, zone.lon, zone.radius_m) : null;
+    // Рамка — по треку; зона не раздвигает карту, если дом далеко от трека.
+    const box = bounds([...(fullLine ?? []), ...(line ?? [])]) ?? bounds(zoneRing ?? []);
+    const el = container.current;
+
+    // Камера сразу в рамке трека: не грузим сначала тайлы всего мира.
     const map = new MapLibreMap({
-      container: container.current,
+      container: el,
       style: MAP_STYLE,
+      ...(box
+        ? { bounds: box, fitBoundsOptions: { padding: FIT_PADDING, maxZoom: 16 } }
+        : { center: [37.62, 55.75] as [number, number], zoom: 9 }),
       attributionControl: { compact: true },
       cooperativeGestures: true,
     });
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
-    const el = container.current;
     map.on("idle", () => (el.dataset.ready = "true"));
     map.on("error", (e) => console.error("map error:", e.error?.message ?? e));
 
-    map.on("load", () => {
-      const zoneRing = zone ? circle(zone.lat, zone.lon, zone.radius_m) : null;
+    // style.load наступает сразу после разбора стиля — линия видна, пока догружаются тайлы.
+    map.once("style.load", () => {
+      el.dataset.style = "true";
       map.addSource("zone", {
         type: "geojson",
         data: {
@@ -129,17 +140,6 @@ export function TrackMap({ line, fullLine, zone, label }: TrackMapProps) {
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#C2410C", "line-width": 4.5 },
       });
-
-      // Рамка — по треку; зона рисуется, но не раздвигает карту, если дом далеко от трека.
-      const box = bounds([...(fullLine ?? []), ...(line ?? [])]) ?? bounds(zoneRing ?? []);
-      if (box) {
-        map.fitBounds(box, {
-          padding: { top: 32, right: 48, bottom: 64, left: 32 },
-          animate: false,
-          maxZoom: 16,
-        });
-      }
-      (map.getSource("track") as GeoJSONSource | undefined)?.setData(lineFeature(line));
     });
 
     return () => map.remove();

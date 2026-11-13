@@ -646,7 +646,7 @@ textarea.input {
   list-style: none;
   margin: 0;
   padding: 0;
-  height: 132px;
+  height: 150px;
   display: flex;
   align-items: stretch;
   gap: 4px;
@@ -929,4 +929,60 @@ fieldset.field legend {
   .track-row__stats .muted {
     display: none;
   }
+}
+
+/* ---------- Заголовок экрана с «Назад» ---------- */
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.page-head__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.icon-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-left: -8px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--chip);
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pace-chart__value {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pace-chart__value--hidden {
+  visibility: hidden;
 }

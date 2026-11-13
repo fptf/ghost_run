@@ -27,6 +27,7 @@
 - [x] 4.3 Превью по макету Preview: карта, показатели, график темпа (SVG), название, описание, фото, видимость, «Опубликовать»; место под плашку совпадения
 - [x] 4.4 Экраны ошибок с причиной и «Загрузить другой файл»; «Этот трек уже есть» со ссылкой
 - [x] 4.5 «Мои треки» в профиле со статусами; ленты и статистика в профилях
+- [x] 4.6 Просмотр трека и отдельная форма с «Назад»; после публикации — на просмотр; значения на графике темпа
 
 ## 5. Tests
 - [x] 5.1 Supported Files: Valid GPX, Same run in three formats, File too large, Unsupported format, Processing time
@@ -38,3 +39,4 @@
 - [x] 5.7 Profile: Guest sees only public tracks, Personal record; Delete account with tracks
 - [x] 5.8 Upload Rate Limit: Limit exceeded
 - [x] 5.9 Vitest: экран загрузки (шаги, ошибка с причиной), превью (публикация)
+- [x] 5.10 Vitest: After publishing, Leave the form, Draft view, Pace values shown
