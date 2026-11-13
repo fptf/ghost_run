@@ -1,7 +1,7 @@
 # platform Specification
 
 ## Purpose
-TBD - created by archiving change add-bootstrap. Update Purpose after archive.
+Каркас платформы: локальное окружение одной командой, настройки в БД без перезапуска, фоновый воркер и CI (раздел 9 ТЗ).
 
 ## Requirements
 
