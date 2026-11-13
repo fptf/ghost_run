@@ -38,4 +38,7 @@ DEFAULT_SETTINGS: Final[dict[str, Any]] = {
     "geometry.simplify_tolerance_m": 5,
     "upload.max_photos": 5,
     "upload.max_photo_bytes": 10 * 1024 * 1024,
+    # add-map-search: кластеры до этого зума включительно, предел линий на экране
+    "map.cluster_max_zoom": 11,
+    "map.max_lines": 300,
 }

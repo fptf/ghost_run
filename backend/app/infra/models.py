@@ -118,6 +118,9 @@ class Track(Base):
     visible_from_m: Mapped[float | None] = mapped_column(Float)
     visible_to_m: Mapped[float | None] = mapped_column(Float)
     fully_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    parent_track_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tracks.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -140,4 +143,13 @@ class TrackPhoto(Base):
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     s3_key: Mapped[str] = mapped_column(String(512))
     content_type: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TrackDownload(Base):
+    __tablename__ = "track_downloads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

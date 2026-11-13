@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 
 import { api } from "../api/client";
 import { useAuth } from "../auth/useAuth";
@@ -17,6 +17,7 @@ export function MyProfilePage() {
   const me = useMe();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const flash = (useLocation().state as { flash?: string } | null)?.flash;
   const [feed, setFeed] = useState<Feed>("tracks");
   const tracks = useQuery({
     queryKey: ["my-tracks"],
@@ -32,6 +33,11 @@ export function MyProfilePage() {
   }
   return (
     <main className="page">
+      {flash === "saved" && (
+        <p role="status" className="notice notice--ok">
+          {t("settings.saved")}
+        </p>
+      )}
       <ProfileView
         profile={me.data}
         extraStats={

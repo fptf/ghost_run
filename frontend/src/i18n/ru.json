@@ -15,7 +15,9 @@
     "profile": "Профиль",
     "settings": "Настройки",
     "uploadShort": "Загрузить",
-    "uploadTail": "трек"
+    "uploadTail": "трек",
+    "map": "Карта",
+    "main": "Основная навигация"
   },
   "health": {
     "label": "Состояние сервера",
@@ -137,6 +139,60 @@
     },
     "edit": "Редактировать",
     "editTitle": "Редактирование трека",
-    "draftNote": "Черновик — трек видите только вы."
+    "draftNote": "Черновик — трек видите только вы.",
+    "downloadGpx": "Скачать GPX",
+    "showOnMap": "Показать на карте",
+    "group": "Группа маршрута",
+    "runItHint": "Пробегите этот маршрут и просто загрузите свой трек — попытка засчитается сама."
+  },
+  "map": {
+    "label": "Карта треков",
+    "clusterLabel": "Треков здесь: {{count}}",
+    "start": "Старт",
+    "finish": "Финиш"
+  },
+  "search": {
+    "placeholder": "Маршрут, автор или город",
+    "distance": "Дистанция",
+    "anyDistance": "любая",
+    "custom": "Своя",
+    "customRange": "от {{min}} до {{max}} км",
+    "fromKm": "От, км",
+    "toKm": "До, км",
+    "moreFilters": "Все фильтры",
+    "timeFrom": "Время от, мин",
+    "timeTo": "Время до, мин",
+    "paceFrom": "Темп от, мин/км",
+    "paceTo": "Темп до, мин/км",
+    "dateFrom": "Дата с",
+    "dateTo": "Дата по",
+    "hasAttempts": "Есть попытки",
+    "inArea_one": "{{count}} маршрут в области",
+    "inArea_few": "{{count}} маршрута в области",
+    "inArea_many": "{{count}} маршрутов в области",
+    "inArea_other": "{{count}} маршрута в области",
+    "foundByText_one": "Найден {{count}} маршрут",
+    "foundByText_few": "Найдено {{count}} маршрута",
+    "foundByText_many": "Найдено {{count}} маршрутов",
+    "foundByText_other": "Найдено {{count}} маршрута",
+    "runners_one": "{{count}} бегун в группе",
+    "runners_few": "{{count}} бегуна в группе",
+    "runners_many": "{{count}} бегунов в группе",
+    "runners_other": "{{count}} бегуна в группе",
+    "onlyAuthor": "Пока только автор",
+    "nothing": "В этой области нет подходящих маршрутов. Сдвиньте карту или ослабьте фильтры.",
+    "more": "Показать ещё",
+    "sortLabel": "Сортировка",
+    "backToList": "К списку маршрутов",
+    "openCard": "Открыть карточку",
+    "ranOn": "пробежка {{date}}",
+    "sort": {
+      "popular": "Популярные",
+      "distance": "По дистанции",
+      "pace": "По темпу",
+      "date": "Новые",
+      "attempts": "По числу попыток"
+    },
+    "title": "Карта маршрутов"
   }
 }

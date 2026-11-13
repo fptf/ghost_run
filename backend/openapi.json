@@ -85,6 +85,29 @@
         "title": "Body_upload_track_tracks_post",
         "type": "object"
       },
+      "Cluster": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lon",
+          "lat",
+          "count"
+        ],
+        "title": "Cluster",
+        "type": "object"
+      },
       "DevSignIn": {
         "properties": {
           "email": {
@@ -232,6 +255,54 @@
           "lon"
         ],
         "title": "HomePoint",
+        "type": "object"
+      },
+      "KmMark": {
+        "properties": {
+          "km": {
+            "title": "Km",
+            "type": "integer"
+          },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "km",
+          "lon",
+          "lat"
+        ],
+        "title": "KmMark",
+        "type": "object"
+      },
+      "Line": {
+        "properties": {
+          "coordinates": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "coordinates"
+        ],
+        "title": "Line",
         "type": "object"
       },
       "LineGeometry": {
@@ -556,6 +627,161 @@
         "title": "PublicProfile",
         "type": "object"
       },
+      "SearchItem": {
+        "properties": {
+          "attempts_count": {
+            "title": "Attempts Count",
+            "type": "integer"
+          },
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "avg_pace_s_per_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Pace S Per Km"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "runners_count": {
+            "title": "Runners Count",
+            "type": "integer"
+          },
+          "start": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Start",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "total_time_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Time S"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "distance_m",
+          "total_time_s",
+          "avg_pace_s_per_km",
+          "category",
+          "started_at",
+          "author",
+          "runners_count",
+          "attempts_count",
+          "start"
+        ],
+        "title": "SearchItem",
+        "type": "object"
+      },
+      "SearchResponse": {
+        "properties": {
+          "clusters": {
+            "items": {
+              "$ref": "#/components/schemas/Cluster"
+            },
+            "title": "Clusters",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "clusters",
+              "lines"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items",
+          "mode",
+          "clusters",
+          "lines"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
       "Split": {
         "properties": {
           "distance_m": {
@@ -703,6 +929,13 @@
             "title": "Is Owner",
             "type": "boolean"
           },
+          "km_marks": {
+            "items": {
+              "$ref": "#/components/schemas/KmMark"
+            },
+            "title": "Km Marks",
+            "type": "array"
+          },
           "moving_time_s": {
             "anyOf": [
               {
@@ -836,7 +1069,8 @@
           "geometry",
           "photos",
           "is_owner",
-          "owner"
+          "owner",
+          "km_marks"
         ],
         "title": "TrackDetail",
         "type": "object"
@@ -1555,6 +1789,295 @@
         ]
       }
     },
+    "/tracks/search": {
+      "get": {
+        "operationId": "search_tracks_tracks_search_get",
+        "parameters": [
+          {
+            "description": "west,south,east,north",
+            "in": "query",
+            "name": "bbox",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[-\\d.]+(,[-\\d.]+){3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "west,south,east,north",
+              "title": "Bbox"
+            }
+          },
+          {
+            "in": "query",
+            "name": "zoom",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 22,
+              "minimum": 0,
+              "title": "Zoom",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "1",
+                    "5",
+                    "10",
+                    "21",
+                    "21+"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dist_min_km",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dist Min Km"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dist_max_km",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dist Max Km"
+            }
+          },
+          {
+            "in": "query",
+            "name": "time_min_s",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Time Min S"
+            }
+          },
+          {
+            "in": "query",
+            "name": "time_max_s",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Time Max S"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pace_min_s",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pace Min S"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pace_max_s",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pace Max S"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_attempts",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Attempts"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "popular",
+              "enum": [
+                "popular",
+                "distance",
+                "pace",
+                "date",
+                "attempts"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Нужна область карты или текст"
+          }
+        },
+        "summary": "Search Tracks",
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/tracks/{track_id}": {
       "delete": {
         "operationId": "delete_track_tracks__track_id__delete",
@@ -1704,6 +2227,53 @@
         "summary": "Update Track",
         "tags": [
           "tracks"
+        ]
+      }
+    },
+    "/tracks/{track_id}/gpx": {
+      "get": {
+        "operationId": "download_gpx_tracks__track_id__gpx_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "track_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Track Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/gpx+xml": {}
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Нет трека"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download Gpx",
+        "tags": [
+          "search"
         ]
       }
     },

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { Link, NavLink, useNavigate } from "react-router";
 
 import { useAuth } from "../auth/useAuth";
 import { useMe } from "../auth/useMe";
@@ -18,6 +18,11 @@ export function Header() {
         <LogoMark className="logo__mark" />
         {t("app.title")}
       </Link>
+      <nav className="header__links" aria-label={t("nav.main")}>
+        <NavLink to="/" end className="header__link">
+          {t("nav.map")}
+        </NavLink>
+      </nav>
       <nav className="header__nav">
         <button
           type="button"

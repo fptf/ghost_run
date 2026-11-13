@@ -30,6 +30,8 @@ EXPECTED_FROM_TZ = {
     "geometry.simplify_tolerance_m": 5,
     "upload.max_photos": 5,  # ФТ-8
     "upload.max_photo_bytes": 10 * 1024 * 1024,
+    "map.cluster_max_zoom": 11,  # design add-map-search
+    "map.max_lines": 300,
 }
 
 

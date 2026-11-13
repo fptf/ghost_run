@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { Avatar } from "../components/Avatar";
 import { BackButton } from "../components/BackButton";
@@ -7,6 +7,7 @@ import { CATEGORY_LABELS } from "../lib/format";
 import { useTrack } from "../tracks/api";
 import { Photos } from "../tracks/Photos";
 import { TrackSummaryCard } from "../tracks/TrackSummaryCard";
+import { useGpxDownload } from "../tracks/useGpxDownload";
 
 export function TrackNotFound() {
   const { t } = useTranslation();
@@ -27,6 +28,8 @@ export function TrackPage() {
   const { trackId = "" } = useParams();
   const { t } = useTranslation();
   const track = useTrack(trackId, { poll: true });
+  const navigate = useNavigate();
+  const download = useGpxDownload();
   const flash = (useLocation().state as { flash?: "published" | "saved" } | null)?.flash;
 
   if (track.isPending) {
@@ -91,6 +94,31 @@ export function TrackPage() {
       {ready && (
         <>
           <TrackSummaryCard track={tr} />
+          {tr.geometry && (
+            <section className="card">
+              {!tr.is_owner && <p className="notice notice--info">{t("track.runItHint")}</p>}
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={() => void download(tr.id, tr.title)}
+                >
+                  {t("track.downloadGpx")}
+                </button>
+                {tr.status === "published" && tr.visibility === "public" && (
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--sm"
+                    onClick={() => navigate(`/?track=${tr.id}&fit=1`)}
+                  >
+                    {t("track.showOnMap")}
+                  </button>
+                )}
+              </div>
+              <h3 className="card__title">{t("track.group")}</h3>
+              <div className="empty">{t("search.onlyAuthor")}</div>
+            </section>
+          )}
           {(tr.description || tr.photos.length > 0) && (
             <section className="card">
               {tr.description && <p>{tr.description}</p>}

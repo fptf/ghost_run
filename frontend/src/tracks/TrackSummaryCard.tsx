@@ -39,6 +39,7 @@ export function TrackSummaryCard({ track }: { track: TrackDetail }) {
           line={track.geometry?.coordinates}
           fullLine={owner?.full_geometry?.coordinates}
           zone={owner?.hidden_zone}
+          kmMarks={track.km_marks}
           label={t("track.mapLabel")}
         />
         {owner?.hidden_zone && (

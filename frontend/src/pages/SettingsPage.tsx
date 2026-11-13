@@ -7,6 +7,7 @@ import { useNavigate } from "react-router";
 import { api } from "../api/client";
 import type { Schemas } from "../api/client";
 import { useAuth } from "../auth/useAuth";
+import { BackButton } from "../components/BackButton";
 import { useMe } from "../auth/useMe";
 
 const RADIUS_MIN = 200;
@@ -46,7 +47,9 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
     });
     if (data) {
       queryClient.setQueryData(["me"], data);
-      setMessage({ ok: true, text: t("settings.saved") });
+      void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+      // Форма закрывается, как у трека: открываем профиль.
+      navigate("/me", { replace: true, state: { flash: "saved" } });
     } else {
       setMessage({ ok: false, text: errorText(error, t("settings.saveFailed")) });
     }
@@ -69,7 +72,10 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
 
   return (
     <main className="page">
-      <h1>{t("settings.title")}</h1>
+      <div className="page-head">
+        <BackButton fallback="/me" />
+        <h1 className="page-head__title">{t("settings.title")}</h1>
+      </div>
       <form className="stack" onSubmit={onSave}>
         <section className="card">
           <h2 className="card__title">{t("settings.profileSection")}</h2>

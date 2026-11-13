@@ -1,14 +1,9 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
-// Vite обрабатывает воркер как воркер (без клиента HMR) и в dev, и в сборке.
-import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 
-import { MAP_STYLE } from "../lib/mapStyle";
-import type { LngLatBoundsLike } from "maplibre-gl";
+import { boundsOf, MAP_STYLE, markerEl } from "../lib/mapStyle";
 import { useEffect, useRef } from "react";
-
-setWorkerUrl(workerUrl);
 
 type Coords = number[][];
 
@@ -19,6 +14,8 @@ export interface TrackMapProps {
   fullLine?: Coords | null;
   /** Скрытая зона у дома — только автору. */
   zone?: { lat: number; lon: number; radius_m: number } | null;
+  /** Отметки километров на видимой части. */
+  kmMarks?: { km: number; lon: number; lat: number }[];
   label: string;
 }
 
@@ -29,18 +26,6 @@ function circle(lat: number, lon: number, radius: number, steps = 64): Coords {
     const a = (i / steps) * 2 * Math.PI;
     return [lon + dLon * Math.cos(a), lat + dLat * Math.sin(a)];
   });
-}
-
-function bounds(coords: Coords): LngLatBoundsLike | null {
-  if (coords.length === 0) return null;
-  let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const [x = 0, y = 0] of coords) {
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
-    maxX = Math.max(maxX, x);
-    maxY = Math.max(maxY, y);
-  }
-  return [minX, minY, maxX, maxY];
 }
 
 function lineFeature(coords: Coords | null | undefined) {
@@ -60,14 +45,14 @@ function lineFeature(coords: Coords | null | undefined) {
 
 const FIT_PADDING = { top: 32, right: 48, bottom: 64, left: 32 };
 
-export function TrackMap({ line, fullLine, zone, label }: TrackMapProps) {
+export function TrackMap({ line, fullLine, zone, kmMarks, label }: TrackMapProps) {
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!container.current) return;
     const zoneRing = zone ? circle(zone.lat, zone.lon, zone.radius_m) : null;
     // Рамка — по треку; зона не раздвигает карту, если дом далеко от трека.
-    const box = bounds([...(fullLine ?? []), ...(line ?? [])]) ?? bounds(zoneRing ?? []);
+    const box = boundsOf([...(fullLine ?? []), ...(line ?? [])]) ?? boundsOf(zoneRing ?? []);
     const el = container.current;
 
     // Камера сразу в рамке трека: не грузим сначала тайлы всего мира.
@@ -141,8 +126,24 @@ export function TrackMap({ line, fullLine, zone, label }: TrackMapProps) {
       });
     });
 
+    for (const m of kmMarks ?? []) {
+      new Marker({ element: markerEl("km-mark", String(m.km)) })
+        .setLngLat([m.lon, m.lat])
+        .addTo(map);
+    }
+    if (line?.length) {
+      const first = line[0] as [number, number];
+      const last = line[line.length - 1] as [number, number];
+      new Marker({ element: markerEl("end-mark end-mark--start", "", "старт") })
+        .setLngLat(first)
+        .addTo(map);
+      new Marker({ element: markerEl("end-mark end-mark--finish", "", "финиш") })
+        .setLngLat(last)
+        .addTo(map);
+    }
+
     return () => map.remove();
-  }, [line, fullLine, zone]);
+  }, [line, fullLine, zone, kmMarks]);
 
   return <div ref={container} className="track-map" role="img" aria-label={label} />;
 }

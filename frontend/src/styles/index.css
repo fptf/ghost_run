@@ -986,3 +986,415 @@ fieldset.field legend {
 .pace-chart__value--hidden {
   visibility: hidden;
 }
+
+/* ---------- Навигация ---------- */
+
+.header__links {
+  display: none;
+  gap: 4px;
+  margin-left: 16px;
+}
+
+.header__link {
+  padding: 8px 12px;
+  border-radius: var(--r);
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.header__link:hover,
+.header__link.active {
+  color: var(--text);
+  background: var(--chip);
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  height: calc(60px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: rgba(255, 255, 255, 0.97);
+  border-top: 1px solid var(--line);
+}
+
+.bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.bottom-nav__item.active {
+  color: var(--accent);
+}
+
+.app {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+
+.page-loading {
+  min-height: 50vh;
+}
+
+/* ---------- Главная: карта и панель ---------- */
+
+.map-page {
+  position: relative;
+  height: calc(100dvh - var(--header-h) - 60px - env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+.map-wrap,
+.map-wrap .search-map.maplibregl-map,
+.map-wrap .search-map {
+  /* MapLibre ставит контейнеру position: relative — перебиваем специфичностью */
+  position: absolute;
+  inset: 0;
+}
+
+.search-map {
+  background: var(--map);
+}
+
+/* Телефон: панель «растворяется», фильтры — поверх карты сверху, список — выдвижной снизу */
+.map-panel {
+  display: contents;
+}
+
+.map-panel__filters {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  left: 12px;
+  right: 60px;
+  padding: 12px;
+  border-radius: var(--r-xl);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100% - 200px);
+  overflow-y: auto;
+}
+
+.map-panel__body {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 128px;
+  padding: 8px 16px 16px;
+  border-radius: 18px 18px 0 0;
+  background: #fff;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: max-height 0.2s ease;
+}
+
+.map-panel__body::before {
+  content: "";
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  flex: none;
+}
+
+.map-panel--open .map-panel__body {
+  max-height: 72%;
+  overflow-y: auto;
+}
+
+.sheet-toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.list-head {
+  flex-wrap: nowrap;
+}
+
+.sort select {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.search-box .input {
+  height: 40px;
+  background: var(--chip);
+  border-color: transparent;
+}
+
+.input--sm {
+  height: 40px;
+  font-size: 15px;
+}
+
+.field--compact {
+  font-size: 13px;
+  gap: 4px;
+}
+
+.field__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+}
+
+.chip {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--chip);
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--text);
+  color: #fff;
+  font-weight: 600;
+}
+
+.link-btn {
+  align-self: flex-start;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.more-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.result:hover,
+.result[aria-current="true"] {
+  background: var(--surface);
+}
+
+.result__title {
+  font-size: 16px;
+}
+
+.result__meta {
+  font-size: 14px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.result__group {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.card-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-panel__title {
+  font-size: 22px;
+}
+
+.author-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Маркеры на карте ---------- */
+
+.cluster {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 17px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.cluster--md {
+  min-width: 42px;
+  height: 42px;
+  border-radius: 21px;
+}
+
+.cluster--lg {
+  min-width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  font-size: 15px;
+}
+
+.km-mark {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.end-mark {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.end-mark--start {
+  background: #15803d;
+}
+
+.end-mark--finish {
+  background: #15171a;
+}
+
+/* ---------- Десктоп ---------- */
+
+@media (min-width: 900px) {
+  .app {
+    padding-bottom: 0;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .header__links {
+    display: flex;
+  }
+
+  .map-page {
+    height: calc(100dvh - var(--header-h));
+    display: grid;
+    grid-template-columns: 400px 1fr;
+  }
+
+  .map-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--line);
+    background: #fff;
+    overflow-y: auto;
+  }
+
+  .map-panel__filters,
+  .map-panel__body {
+    position: static;
+    max-height: none;
+    box-shadow: none;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .map-panel__filters {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .map-panel__body {
+    padding: 12px 20px 24px;
+  }
+
+  .map-panel__body::before {
+    display: none;
+  }
+
+  .sheet-toggle {
+    pointer-events: none;
+  }
+
+  .map-wrap {
+    position: relative;
+  }
+}

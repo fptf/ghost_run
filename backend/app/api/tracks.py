@@ -16,6 +16,7 @@ from app.infra.photos import BadPhotoError, sanitize
 from app.infra.queue import TaskQueue, get_queue
 from app.infra.rate_limit import RateLimiter
 from app.infra.s3 import s3_client
+from app.infra.search_repo import km_marks
 from app.infra.settings_repo import get_setting
 from app.infra.track_processing import source_key, track_prefix
 from app.infra.users_repo import get_home
@@ -82,6 +83,12 @@ class OwnerExtras(BaseModel):
     fully_hidden: bool
 
 
+class KmMark(BaseModel):
+    km: int
+    lon: float
+    lat: float
+
+
 class TrackDetail(TrackSummary):
     description: str | None
     moving_time_s: float | None
@@ -93,6 +100,7 @@ class TrackDetail(TrackSummary):
     photos: list[Photo]
     is_owner: bool
     owner: OwnerExtras | None
+    km_marks: list[KmMark]
 
 
 class TrackUpdate(BaseModel):
@@ -167,6 +175,7 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
         ],
         is_owner=is_owner,
         owner=owner,
+        km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
     )
 
 

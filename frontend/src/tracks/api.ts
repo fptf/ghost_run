@@ -7,9 +7,10 @@ export type TrackDetail = Schemas["TrackDetail"];
 export type TrackSummary = Schemas["TrackSummary"];
 export type UploadError = Schemas["UploadError"];
 
-export function useTrack(trackId: string, opts: { poll?: boolean } = {}) {
+export function useTrack(trackId: string, opts: { poll?: boolean; enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["track", trackId],
+    enabled: opts.enabled ?? true,
     queryFn: async () => {
       const { data, error } = await api.GET("/tracks/{track_id}", {
         params: { path: { track_id: trackId } },

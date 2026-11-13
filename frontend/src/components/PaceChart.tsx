@@ -18,7 +18,8 @@ export function PaceChart({ splits }: { splits: Split[] }) {
 
   const slowest = Math.max(...paces.map((p) => p.pace));
   const fastest = Math.min(...paces.map((p) => p.pace));
-  const span = slowest - fastest || 30;
+  // Минимальный размах 20 с: почти равный темп не должен выглядеть как разный.
+  const span = Math.max(slowest - fastest, 20);
   // Самый медленный км — 20% высоты, самый быстрый — 100%.
   const height = (pace: number) => 20 + ((slowest - pace) / span) * 80;
   // При большом числе км подписываем только лучший и худший, остальные — в подсказке.

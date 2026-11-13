@@ -159,6 +159,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/tracks/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search Tracks */
+    get: operations["search_tracks_tracks_search_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/tracks/{track_id}": {
     parameters: {
       query?: never;
@@ -176,6 +193,23 @@ export interface paths {
     head?: never;
     /** Update Track */
     patch: operations["update_track_tracks__track_id__patch"];
+    trace?: never;
+  };
+  "/tracks/{track_id}/gpx": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download Gpx */
+    get: operations["download_gpx_tracks__track_id__gpx_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/tracks/{track_id}/photos": {
@@ -280,6 +314,15 @@ export interface components {
       /** File */
       file: string;
     };
+    /** Cluster */
+    Cluster: {
+      /** Count */
+      count: number;
+      /** Lat */
+      lat: number;
+      /** Lon */
+      lon: number;
+    };
     /** DevSignIn */
     DevSignIn: {
       /**
@@ -342,6 +385,25 @@ export interface components {
       lat: number;
       /** Lon */
       lon: number;
+    };
+    /** KmMark */
+    KmMark: {
+      /** Km */
+      km: number;
+      /** Lat */
+      lat: number;
+      /** Lon */
+      lon: number;
+    };
+    /** Line */
+    Line: {
+      /** Coordinates */
+      coordinates: number[][];
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
     };
     /** LineGeometry */
     LineGeometry: {
@@ -445,6 +507,49 @@ export interface components {
       name: string;
       stats: components["schemas"]["ProfileStats"];
     };
+    /** SearchItem */
+    SearchItem: {
+      /** Attempts Count */
+      attempts_count: number;
+      author: components["schemas"]["Author"];
+      /** Avg Pace S Per Km */
+      avg_pace_s_per_km: number | null;
+      /** Category */
+      category: string | null;
+      /** Distance M */
+      distance_m: number | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Runners Count */
+      runners_count: number;
+      /** Start */
+      start: number[];
+      /** Started At */
+      started_at: string | null;
+      /** Title */
+      title: string | null;
+      /** Total Time S */
+      total_time_s: number | null;
+    };
+    /** SearchResponse */
+    SearchResponse: {
+      /** Clusters */
+      clusters: components["schemas"]["Cluster"][];
+      /** Items */
+      items: components["schemas"]["SearchItem"][];
+      /** Lines */
+      lines: components["schemas"]["Line"][];
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: "clusters" | "lines";
+      /** Total */
+      total: number;
+    };
     /** Split */
     Split: {
       /** Distance M */
@@ -499,6 +604,8 @@ export interface components {
       id: string;
       /** Is Owner */
       is_owner: boolean;
+      /** Km Marks */
+      km_marks: components["schemas"]["KmMark"][];
       /** Moving Time S */
       moving_time_s: number | null;
       owner: components["schemas"]["OwnerExtras"] | null;
@@ -967,6 +1074,51 @@ export interface operations {
       };
     };
   };
+  search_tracks_tracks_search_get: {
+    parameters: {
+      query?: {
+        /** @description west,south,east,north */
+        bbox?: string | null;
+        zoom?: number;
+        category?: ("1" | "5" | "10" | "21" | "21+") | null;
+        dist_min_km?: number | null;
+        dist_max_km?: number | null;
+        time_min_s?: number | null;
+        time_max_s?: number | null;
+        pace_min_s?: number | null;
+        pace_max_s?: number | null;
+        date_from?: string | null;
+        date_to?: string | null;
+        has_attempts?: boolean | null;
+        q?: string | null;
+        sort?: "popular" | "distance" | "pace" | "date" | "attempts";
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchResponse"];
+        };
+      };
+      /** @description Нужна область карты или текст */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   read_track_tracks__track_id__get: {
     parameters: {
       query?: never;
@@ -1067,6 +1219,44 @@ export interface operations {
       };
       /** @description Трек не готов */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  download_gpx_tracks__track_id__gpx_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/gpx+xml": unknown;
+        };
+      };
+      /** @description Нет трека */
+      404: {
         headers: {
           [name: string]: unknown;
         };

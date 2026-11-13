@@ -1,4 +1,9 @@
-import type { StyleSpecification } from "maplibre-gl";
+import { setWorkerUrl } from "maplibre-gl";
+import type { LngLatBoundsLike, StyleSpecification } from "maplibre-gl";
+// Vite обрабатывает воркер как воркер (без клиента HMR) и в dev, и в сборке.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
+setWorkerUrl(workerUrl);
 
 /**
  * Подложка карты — растровые тайлы OpenStreetMap.
@@ -27,3 +32,29 @@ export const MAP_STYLE: StyleSpecification = {
     { id: "basemap", type: "raster", source: "basemap", paint: { "raster-saturation": -0.35 } },
   ],
 };
+
+export const ACCENT = "#C2410C";
+
+export function boundsOf(coords: number[][]): LngLatBoundsLike | null {
+  if (coords.length === 0) return null;
+  let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const [x = 0, y = 0] of coords) {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
+  return [minX, minY, maxX, maxY];
+}
+
+/** HTML-маркер: у встроенного растрового стиля нет шрифтов для подписей на карте. */
+export function markerEl(className: string, text = "", label?: string): HTMLElement {
+  const el = document.createElement("div");
+  el.className = className;
+  el.textContent = text;
+  if (label) {
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", label);
+  }
+  return el;
+}
