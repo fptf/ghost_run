@@ -1,13 +1,16 @@
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, model_validator
 
 from app.api.auth import REFRESH_COOKIE
 from app.api.deps import ConfigDep, CurrentUser, DbDep
 from app.domain.privacy import RadiusBounds, RadiusOutOfRangeError, validate_hide_radius
+from app.infra import tracks_repo
 from app.infra.account_cleanup import run_cleanups
 from app.infra.models import User
+from app.infra.queue import TaskQueue, get_queue
 from app.infra.settings_repo import get_setting
 from app.infra.users_repo import get_home, get_user, set_home
 
@@ -58,21 +61,21 @@ class ProfileUpdate(BaseModel):
         return self
 
 
-def _public(user: User) -> PublicProfile:
+def _public(db: DbDep, user: User, public_only: bool = True) -> PublicProfile:
     return PublicProfile(
         id=user.id,
         name=user.name,
         avatar_url=user.avatar_url,
         city=user.city,
         about=user.about,
-        stats=ProfileStats(),
+        stats=ProfileStats(**tracks_repo.stats(db, user.id, public_only=public_only)),
     )
 
 
 def _own(db: DbDep, user: User) -> OwnProfile:
     home = get_home(db, user)
     return OwnProfile(
-        **_public(user).model_dump(),
+        **_public(db, user, public_only=False).model_dump(),
         email=user.email,
         role=user.role,
         home=HomePoint(lat=home[0], lon=home[1]) if home else None,
@@ -86,8 +89,14 @@ def read_me(user: CurrentUser, db: DbDep) -> OwnProfile:
 
 
 @router.patch("/me", responses={422: {"description": "Недопустимые значения"}})
-def update_me(body: ProfileUpdate, user: CurrentUser, db: DbDep) -> OwnProfile:
+def update_me(
+    body: ProfileUpdate,
+    user: CurrentUser,
+    db: DbDep,
+    queue: Annotated[TaskQueue, Depends(get_queue)],
+) -> OwnProfile:
     fields = body.model_fields_set
+    zone_before = (get_home(db, user), user.hide_radius_m)
     if "name" in fields and body.name is not None:
         user.name = body.name
     if "city" in fields:
@@ -107,6 +116,8 @@ def update_me(body: ProfileUpdate, user: CurrentUser, db: DbDep) -> OwnProfile:
             user.hide_radius_m = None
     db.commit()
     db.refresh(user)
+    if (get_home(db, user), user.hide_radius_m) != zone_before:
+        queue.recompute_visibility(user.id)
     return _own(db, user)
 
 
@@ -123,4 +134,4 @@ def read_profile(user_id: uuid.UUID, db: DbDep) -> PublicProfile:
     user = get_user(db, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь не найден")
-    return _public(user)
+    return _public(db, user)

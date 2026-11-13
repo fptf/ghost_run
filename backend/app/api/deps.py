@@ -51,6 +51,23 @@ def current_user(
 CurrentUser = Annotated[User, Depends(current_user)]
 
 
+def optional_user(
+    cfg: ConfigDep,
+    db: DbDep,
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+) -> User | None:
+    """Пользователь, если передан действительный токен; иначе гость."""
+    if creds is None:
+        return None
+    try:
+        return db.get(User, decode_access_token(creds.credentials, cfg))
+    except InvalidTokenError:
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(optional_user)]
+
+
 def auth_rate_limit(request: Request, cfg: ConfigDep, db: DbDep) -> None:
     limit = int(get_setting(db, "auth.rate_limit_per_minute"))
     ip = request.client.host if request.client else "unknown"

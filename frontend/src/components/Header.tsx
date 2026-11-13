@@ -21,12 +21,12 @@ export function Header() {
       <nav className="header__nav">
         <button
           type="button"
-          className="btn btn--primary btn--sm"
+          className="btn btn--primary btn--sm btn--nogap"
           aria-label={t("nav.upload")}
           onClick={() => navigate("/upload")}
         >
           {t("nav.uploadShort")}
-          <span className="btn__long">{t("nav.uploadTail")}</span>
+          <span className="btn__long">&nbsp;{t("nav.uploadTail")}</span>
         </button>
         {status === "authenticated" ? (
           <>

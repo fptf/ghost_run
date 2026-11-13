@@ -17,6 +17,8 @@ from testcontainers.core.wait_strategies import HttpWaitStrategy
 from alembic import command
 from app.config import Config, get_config
 from app.infra.db import get_engine
+from app.infra.queue import get_queue
+from app.infra.track_processing import process_track, recompute_visibility
 from app.main import app
 from app.scripts.init_storage import ensure_bucket
 
@@ -90,6 +92,7 @@ def db(migrated: Config) -> Iterator[Session]:
 def client(migrated: Config) -> Iterator[TestClient]:
     redis.Redis.from_url(migrated.redis_url).flushdb()  # сбрасываем счётчики лимитов
     app.dependency_overrides[get_config] = lambda: migrated
+    app.dependency_overrides[get_queue] = lambda: InlineQueue(migrated)
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
@@ -101,3 +104,16 @@ def dev_login(client: TestClient, email: str | None = None, name: str = "Бег�
     resp = client.post("/auth/dev-login", json={"email": email, "name": name})
     assert resp.status_code == 200, resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+class InlineQueue:
+    """Выполняет фоновые задачи сразу, в том же процессе."""
+
+    def __init__(self, cfg: Config) -> None:
+        self.cfg = cfg
+
+    def process_track(self, track_id: uuid.UUID) -> None:
+        process_track(self.cfg, track_id)
+
+    def recompute_visibility(self, user_id: uuid.UUID) -> None:
+        recompute_visibility(self.cfg, user_id)

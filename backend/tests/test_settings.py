@@ -23,6 +23,13 @@ EXPECTED_FROM_TZ = {
     "upload.rate_limit_per_hour": 20,  # раздел 8
     "privacy.hide_radius_m": {"min": 200, "max": 500},  # ФТ-4
     "auth.rate_limit_per_minute": 10,  # design add-auth-profile
+    "metrics.max_point_speed_mps": 12,  # design add-track-upload
+    "metrics.stopped_speed_mps": 0.5,
+    "metrics.elevation_noise_m": 3,
+    "geometry.resample_step_m": 10,
+    "geometry.simplify_tolerance_m": 5,
+    "upload.max_photos": 5,  # ФТ-8
+    "upload.max_photo_bytes": 10 * 1024 * 1024,
 }
 
 

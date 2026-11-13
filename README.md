@@ -79,6 +79,13 @@ npm run gen:api                                 # клиент из backend/open
 npm run lint && npm run format:check && npm run typecheck && npm run test
 ```
 
+Тестовые треки (`backend/tests/fixtures/tracks/`) — только обезличенные копии реальных пробежек:
+```bash
+python3 -I tools/anonymize_gpx.py <папка с GPX> backend/tests/fixtures/tracks   # сдвиг координат, срез концов
+cd backend && uv run python ../tools/convert_track.py tests/fixtures/tracks/run_20261026.gpx  # .tcx и .fit
+```
+Исходные треки с реальными координатами (`./tracks/`) в git не попадают.
+
 Настройки (пороги сопоставления, категории, популярность, лимиты) лежат в таблице `settings`
 и читаются без перезапуска.
 

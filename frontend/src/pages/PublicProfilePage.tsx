@@ -4,6 +4,7 @@ import { useParams } from "react-router";
 
 import { api } from "../api/client";
 import { ProfileView } from "../components/ProfileView";
+import { TrackList } from "../components/TrackList";
 
 export function PublicProfilePage() {
   const { userId = "" } = useParams();
@@ -19,6 +20,13 @@ export function PublicProfilePage() {
     },
     retry: false,
   });
+  const tracks = useQuery({
+    queryKey: ["user-tracks", userId],
+    queryFn: async () =>
+      (await api.GET("/users/{user_id}/tracks", { params: { path: { user_id: userId } } })).data ??
+      [],
+    enabled: profile.isSuccess,
+  });
 
   return (
     <main className="page">
@@ -28,7 +36,15 @@ export function PublicProfilePage() {
           <h1>{t("profile.notFound")}</h1>
         </div>
       )}
-      {profile.data && <ProfileView profile={profile.data} />}
+      {profile.data && (
+        <>
+          <ProfileView profile={profile.data} />
+          <section className="card">
+            <h2 className="card__title">{t("profile.tracks")}</h2>
+            <TrackList tracks={tracks.data ?? []} empty={t("profile.noPublicTracks")} />
+          </section>
+        </>
+      )}
     </main>
   );
 }

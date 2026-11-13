@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Schemas } from "../api/client";
+import { CATEGORY_LABELS, formatDuration } from "../lib/format";
 import { Avatar } from "./Avatar";
 
 export function ProfileView({
@@ -44,7 +45,20 @@ export function ProfileView({
       </section>
       <section className="card">
         <h2 className="card__title">{t("profile.records")}</h2>
-        {records.length === 0 && <div className="empty">{t("profile.noRecords")}</div>}
+        {records.length === 0 ? (
+          <div className="empty">{t("profile.noRecords")}</div>
+        ) : (
+          <dl className="stats">
+            {Object.keys(CATEGORY_LABELS)
+              .filter((c) => profile.stats.records?.[c] != null)
+              .map((c) => (
+                <div key={c} className="stat">
+                  <dt>{CATEGORY_LABELS[c]}</dt>
+                  <dd>{formatDuration(profile.stats.records?.[c])}</dd>
+                </div>
+              ))}
+          </dl>
+        )}
       </section>
     </>
   );

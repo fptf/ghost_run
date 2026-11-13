@@ -3,8 +3,18 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from geoalchemy2 import Geography
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, func
+from geoalchemy2 import Geography, Geometry
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,3 +67,77 @@ class RefreshToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TrackStatus(enum.StrEnum):
+    processing = "processing"
+    rejected = "rejected"
+    draft = "draft"
+    published = "published"
+
+
+class Visibility(enum.StrEnum):
+    public = "public"
+    link = "link"
+    private = "private"
+
+
+def _geom(kind: str) -> Geometry:
+    return Geometry(geometry_type=kind, srid=4326, spatial_index=False)
+
+
+class Track(Base):
+    __tablename__ = "tracks"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(16), default=TrackStatus.processing.value)
+    reject_reason: Mapped[str | None] = mapped_column(String(32))
+    visibility: Mapped[str] = mapped_column(String(16), default=Visibility.private.value)
+    title: Mapped[str | None] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text)
+    file_format: Mapped[str] = mapped_column(String(8))
+    file_size: Mapped[int] = mapped_column(Integer)
+    file_sha256: Mapped[str] = mapped_column(String(64))
+    source_name: Mapped[str | None] = mapped_column(String(255))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    distance_m: Mapped[float | None] = mapped_column(Float)
+    total_time_s: Mapped[float | None] = mapped_column(Float)
+    moving_time_s: Mapped[float | None] = mapped_column(Float)
+    avg_pace_s_per_km: Mapped[float | None] = mapped_column(Float)
+    elevation_gain_m: Mapped[float | None] = mapped_column(Float)
+    has_elevation: Mapped[bool | None] = mapped_column(Boolean)
+    category: Mapped[str | None] = mapped_column(String(8))
+    geometry: Mapped[Any | None] = mapped_column(_geom("LINESTRINGZM"))
+    full_display_geometry: Mapped[Any | None] = mapped_column(_geom("LINESTRING"))
+    visible_geometry: Mapped[Any | None] = mapped_column(_geom("LINESTRINGM"))
+    route_geometry: Mapped[Any | None] = mapped_column(_geom("LINESTRINGM"))
+    display_geometry: Mapped[Any | None] = mapped_column(_geom("LINESTRING"))
+    start_point: Mapped[Any | None] = mapped_column(_geom("POINT"))
+    finish_point: Mapped[Any | None] = mapped_column(_geom("POINT"))
+    visible_from_m: Mapped[float | None] = mapped_column(Float)
+    visible_to_m: Mapped[float | None] = mapped_column(Float)
+    fully_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TrackSplit(Base):
+    __tablename__ = "track_splits"
+
+    track_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tracks.id", ondelete="CASCADE"), primary_key=True
+    )
+    idx: Mapped[int] = mapped_column(Integer, primary_key=True)
+    distance_m: Mapped[float] = mapped_column(Float)
+    time_s: Mapped[float] = mapped_column(Float)
+
+
+class TrackPhoto(Base):
+    __tablename__ = "track_photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    s3_key: Mapped[str] = mapped_column(String(512))
+    content_type: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -1,10 +1,13 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
+import { api } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { useMe } from "../auth/useMe";
 import { ProfileView } from "../components/ProfileView";
+import { TrackList } from "../components/TrackList";
 
 const FEEDS = ["tracks", "attempts", "achievements"] as const;
 type Feed = (typeof FEEDS)[number];
@@ -15,6 +18,10 @@ export function MyProfilePage() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [feed, setFeed] = useState<Feed>("tracks");
+  const tracks = useQuery({
+    queryKey: ["my-tracks"],
+    queryFn: async () => (await api.GET("/me/tracks")).data ?? [],
+  });
 
   if (!me.data) {
     return (
@@ -63,8 +70,12 @@ export function MyProfilePage() {
             </button>
           ))}
         </div>
-        <div role="tabpanel" className="empty">
-          {t(`profile.empty.${feed}`)}
+        <div role="tabpanel">
+          {feed === "tracks" ? (
+            <TrackList tracks={tracks.data ?? []} empty={t("profile.empty.tracks")} showStatus />
+          ) : (
+            <div className="empty">{t(`profile.empty.${feed}`)}</div>
+          )}
         </div>
       </section>
     </main>

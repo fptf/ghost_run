@@ -125,6 +125,94 @@ export interface paths {
     patch: operations["update_me_me_patch"];
     trace?: never;
   };
+  "/me/tracks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** My Tracks */
+    get: operations["my_tracks_me_tracks_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tracks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload Track */
+    post: operations["upload_track_tracks_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tracks/{track_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read Track */
+    get: operations["read_track_tracks__track_id__get"];
+    put?: never;
+    post?: never;
+    /** Delete Track */
+    delete: operations["delete_track_tracks__track_id__delete"];
+    options?: never;
+    head?: never;
+    /** Update Track */
+    patch: operations["update_track_tracks__track_id__patch"];
+    trace?: never;
+  };
+  "/tracks/{track_id}/photos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add Photo */
+    post: operations["add_photo_tracks__track_id__photos_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tracks/{track_id}/photos/{photo_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read Photo */
+    get: operations["read_photo_tracks__track_id__photos__photo_id__get"];
+    put?: never;
+    post?: never;
+    /** Delete Photo */
+    delete: operations["delete_photo_tracks__track_id__photos__photo_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/users/{user_id}": {
     parameters: {
       query?: never;
@@ -134,6 +222,23 @@ export interface paths {
     };
     /** Read Profile */
     get: operations["read_profile_users__user_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/users/{user_id}/tracks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** User Tracks */
+    get: operations["user_tracks_users__user_id__tracks_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -152,6 +257,28 @@ export interface components {
       dev_login_enabled: boolean;
       /** Google Client Id */
       google_client_id: string | null;
+    };
+    /** Author */
+    Author: {
+      /** Avatar Url */
+      avatar_url: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+    };
+    /** Body_add_photo_tracks__track_id__photos_post */
+    Body_add_photo_tracks__track_id__photos_post: {
+      /** File */
+      file: string;
+    };
+    /** Body_upload_track_tracks_post */
+    Body_upload_track_tracks_post: {
+      /** File */
+      file: string;
     };
     /** DevSignIn */
     DevSignIn: {
@@ -200,12 +327,31 @@ export interface components {
        */
       status: "ok" | "error";
     };
+    /** HiddenZone */
+    HiddenZone: {
+      /** Lat */
+      lat: number;
+      /** Lon */
+      lon: number;
+      /** Radius M */
+      radius_m: number;
+    };
     /** HomePoint */
     HomePoint: {
       /** Lat */
       lat: number;
       /** Lon */
       lon: number;
+    };
+    /** LineGeometry */
+    LineGeometry: {
+      /** Coordinates */
+      coordinates: number[][];
+      /**
+       * Type
+       * @constant
+       */
+      type: "LineString";
     };
     /** OwnProfile */
     OwnProfile: {
@@ -235,6 +381,23 @@ export interface components {
       /** Role */
       role: string;
       stats: components["schemas"]["ProfileStats"];
+    };
+    /** OwnerExtras */
+    OwnerExtras: {
+      full_geometry: components["schemas"]["LineGeometry"] | null;
+      /** Fully Hidden */
+      fully_hidden: boolean;
+      hidden_zone: components["schemas"]["HiddenZone"] | null;
+    };
+    /** Photo */
+    Photo: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Url */
+      url: string;
     };
     /** ProfileStats */
     ProfileStats: {
@@ -282,6 +445,15 @@ export interface components {
       name: string;
       stats: components["schemas"]["ProfileStats"];
     };
+    /** Split */
+    Split: {
+      /** Distance M */
+      distance_m: number;
+      /** Idx */
+      idx: number;
+      /** Time S */
+      time_s: number;
+    };
     /** TokenResponse */
     TokenResponse: {
       /** Access Token */
@@ -298,6 +470,126 @@ export interface components {
        * Format: uuid
        */
       user_id: string;
+    };
+    /** TrackDetail */
+    TrackDetail: {
+      author: components["schemas"]["Author"];
+      /** Avg Pace S Per Km */
+      avg_pace_s_per_km: number | null;
+      /** Category */
+      category: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Description */
+      description: string | null;
+      /** Distance M */
+      distance_m: number | null;
+      /** Elevation Gain M */
+      elevation_gain_m: number | null;
+      geometry: components["schemas"]["LineGeometry"] | null;
+      /** Has Elevation */
+      has_elevation: boolean | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Is Owner */
+      is_owner: boolean;
+      /** Moving Time S */
+      moving_time_s: number | null;
+      owner: components["schemas"]["OwnerExtras"] | null;
+      /** Photos */
+      photos: components["schemas"]["Photo"][];
+      /** Reject Message */
+      reject_message: string | null;
+      /** Reject Reason */
+      reject_reason: string | null;
+      /** Splits */
+      splits: components["schemas"]["Split"][];
+      /** Started At */
+      started_at: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "processing" | "rejected" | "draft" | "published";
+      /** Title */
+      title: string | null;
+      /** Total Time S */
+      total_time_s: number | null;
+      /**
+       * Visibility
+       * @enum {string}
+       */
+      visibility: "public" | "link" | "private";
+    };
+    /** TrackSummary */
+    TrackSummary: {
+      /** Avg Pace S Per Km */
+      avg_pace_s_per_km: number | null;
+      /** Category */
+      category: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Distance M */
+      distance_m: number | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Reject Message */
+      reject_message: string | null;
+      /** Reject Reason */
+      reject_reason: string | null;
+      /** Started At */
+      started_at: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "processing" | "rejected" | "draft" | "published";
+      /** Title */
+      title: string | null;
+      /** Total Time S */
+      total_time_s: number | null;
+      /**
+       * Visibility
+       * @enum {string}
+       */
+      visibility: "public" | "link" | "private";
+    };
+    /** TrackUpdate */
+    TrackUpdate: {
+      /** Description */
+      description?: string | null;
+      /**
+       * Publish
+       * @default false
+       */
+      publish: boolean;
+      /** Title */
+      title?: string | null;
+      /** Visibility */
+      visibility?: ("public" | "link" | "private") | null;
+    };
+    /** UploadError */
+    UploadError: {
+      /** Code */
+      code: string;
+      /** Detail */
+      detail: string;
+      /** Retry After S */
+      retry_after_s?: number | null;
+      /** Track Id */
+      track_id?: string | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -586,6 +878,326 @@ export interface operations {
       };
     };
   };
+  my_tracks_me_tracks_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrackSummary"][];
+        };
+      };
+    };
+  };
+  upload_track_tracks_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_track_tracks_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrackSummary"];
+        };
+      };
+      /** @description Этот трек уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+      /** @description Файл больше лимита */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+      /** @description Формат не поддерживается */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Лимит загрузок в час */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+    };
+  };
+  read_track_tracks__track_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrackDetail"];
+        };
+      };
+      /** @description Трек не найден */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_track_tracks__track_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_track_tracks__track_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TrackUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrackDetail"];
+        };
+      };
+      /** @description Трек не найден */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Трек не готов */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_photo_tracks__track_id__photos_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_add_photo_tracks__track_id__photos_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Photo"];
+        };
+      };
+      /** @description Request Entity Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+      /** @description Unsupported Media Type */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+      /** @description Не больше 5 фото */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadError"];
+        };
+      };
+    };
+  };
+  read_photo_tracks__track_id__photos__photo_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+        photo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_photo_tracks__track_id__photos__photo_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+        photo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   read_profile_users__user_id__get: {
     parameters: {
       query?: never;
@@ -612,6 +1224,37 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  user_tracks_users__user_id__tracks_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrackSummary"][];
+        };
       };
       /** @description Validation Error */
       422: {
