@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Загрузка: превью</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#C2410C}a:hover{color:#9A3412}
+</style>
+</helmet>
+<div style="width: 390px; height: 1080px; background: #FFFFFF; font-family: Inter, system-ui, sans-serif; color: #15171A; display: flex; flex-direction: column">
+<div style="height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 8px">
+<a href="Processing.dc.html" aria-label="Назад" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #15171A"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"></path></svg></a>
+<div style="font-size: 16px; font-weight: 600">Новый трек</div>
+</div>
+<div style="position: relative; height: 220px; background: #EEF0EC; overflow: hidden">
+<svg role="img" aria-label="Ваш трек на карте, начало и конец скрыты кругом у дома" width="390" height="220" viewBox="0 0 390 220">
+<g stroke="#FFFFFF" stroke-width="6" fill="none"><path d="M0 70 L390 50"></path><path d="M110 0 L130 220"></path><path d="M290 0 L270 220"></path></g>
+<circle cx="40" cy="150" r="44" fill="#5B6168" fill-opacity="0.18" stroke="#5B6168" stroke-dasharray="4 4"></circle>
+<path d="M40 150 C55 135 60 120 80 112" fill="none" stroke="#9AA0A6" stroke-width="4" stroke-dasharray="2 6" stroke-linecap="round"></path>
+<path d="M80 112 C120 100 140 130 190 120 S270 80 310 100 S340 130 350 110" fill="none" stroke="#C2410C" stroke-width="5" stroke-linecap="round"></path>
+</svg>
+<div style="position: absolute; left: 12px; bottom: 12px; background: rgba(255,255,255,0.94); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #4A4F55">Скрыто 300 м вокруг дома — другие этого не увидят</div>
+</div>
+<div style="margin: 16px 16px 0; padding: 16px; border-radius: 14px; background: #15171A; color: #FFFFFF; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; color: #C9CDD1">Совпало с маршрутом</div>
+<div style="font-size: 18px; font-weight: 700">Набережная до маяка</div>
+<div style="font-size: 15px; line-height: 1.4">23:52 — на 18 с быстрее автора. После публикации попытка встанет в группу.</div>
+<button style="align-self: flex-start; height: 44px; padding: 0; border: 0; background: transparent; color: #FDBA8C; font: inherit; font-size: 14px; font-weight: 600">Не засчитывать</button>
+</div>
+<div style="padding: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Дистанция</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">6,1 км</div></div>
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Время</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">28:40</div></div>
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Темп</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">4:42</div></div>
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Набор</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">41 м</div></div>
+</div>
+<div style="padding: 0 16px; font-size: 13px; color: #5B6168; margin-top: -6px">Весь трек 6,1 км с разминкой; для сравнения вырезан участок маршрута 5,2 км.</div>
+<div style="padding: 20px 16px 0; display: flex; flex-direction: column; gap: 16px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">Название
+<input value="Вечерняя набережная" style="height: 48px; padding: 0 14px; border: 1.5px solid #D0D3D6; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 400">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">Описание
+<textarea placeholder="Как прошла пробежка" style="height: 84px; padding: 12px 14px; border: 1.5px solid #D0D3D6; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 400; resize: none; box-sizing: border-box"></textarea>
+</label>
+<button style="height: 48px; border: 1.5px dashed #B8BCC0; border-radius: 12px; background: #FFFFFF; font: inherit; font-size: 15px; color: #4A4F55">+ Фото, до 5</button>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 14px; font-weight: 600">Видимость</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #F0F1F2; border-radius: 12px">
+<button style="height: 40px; border: 0; border-radius: 9px; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1)">Публичный</button>
+<button style="height: 40px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14px">По ссылке</button>
+<button style="height: 40px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14px">Приватный</button>
+</div>
+<div style="font-size: 13px; color: #5B6168">В группы маршрутов попадают только публичные треки.</div>
+</div>
+</div>
+<div style="padding: 20px 16px 24px; margin-top: auto">
+<a href="ResultWin.dc.html" style="height: 52px; border-radius: 12px; background: #C2410C; color: #FFFFFF; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none">Опубликовать</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

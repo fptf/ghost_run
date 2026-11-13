@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Десктоп: главная</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#C2410C}a:hover{color:#9A3412}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; font-family: Inter, system-ui, sans-serif; color: #15171A; display: flex; flex-direction: column">
+<header style="height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid #ECEEF0; flex-wrap: wrap">
+<div style="font-size: 18px; font-weight: 700">[Название]</div>
+<nav style="display: flex; gap: 20px; font-size: 15px">
+<a href="DesktopMain.dc.html" style="color: #15171A; font-weight: 600; text-decoration: none">Карта</a>
+<a href="#" style="color: #4A4F55; text-decoration: none">Рейтинги</a>
+</nav>
+<label style="flex: 1; max-width: 420px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; background: #F0F1F2; border-radius: 10px; margin-left: auto">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6168" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input placeholder="Маршрут, автор или город" style="border: 0; outline: 0; font: inherit; font-size: 14px; width: 100%; background: transparent">
+</label>
+<a href="Processing.dc.html" style="height: 40px; padding: 0 16px; border-radius: 10px; background: #C2410C; color: #FFFFFF; font-size: 14px; font-weight: 600; display: flex; align-items: center; text-decoration: none">Загрузить трек</a>
+<a href="#" aria-label="Профиль, 2 новые попытки на ваши треки" style="position: relative; width: 40px; height: 40px; border-radius: 20px; background: #F0F1F2; display: flex; align-items: center; justify-content: center; color: #15171A"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg><span style="position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: #C2410C; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">2</span></a>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap">
+<aside style="flex: 1 1 360px; max-width: 420px; border-right: 1px solid #ECEEF0; display: flex; flex-direction: column">
+<div style="padding: 20px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #ECEEF0">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="font-weight: 600">Дистанция</span><span style="color: #5B6168">от 3 до 7,5 км</span></div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px">
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">1</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #15171A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">5</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">10</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">21</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">21+</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 13px">Своя</button>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button style="height: 36px; padding: 0 12px; border: 1px solid #D0D3D6; border-radius: 18px; background: #FFFFFF; font: inherit; font-size: 13px">Время</button>
+<button style="height: 36px; padding: 0 12px; border: 1px solid #D0D3D6; border-radius: 18px; background: #FFFFFF; font: inherit; font-size: 13px">Темп</button>
+<button style="height: 36px; padding: 0 12px; border: 1px solid #D0D3D6; border-radius: 18px; background: #FFFFFF; font: inherit; font-size: 13px">Дата</button>
+<button style="height: 36px; padding: 0 12px; border: 1px solid #D0D3D6; border-radius: 18px; background: #FFFFFF; font: inherit; font-size: 13px">Есть попытки</button>
+</div>
+</div>
+<div style="padding: 14px 20px 6px; display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-size: 16px; font-weight: 600">16 маршрутов в области</div>
+<button style="border: 0; background: transparent; font: inherit; font-size: 13px; color: #4A4F55">Популярные ▾</button>
+</div>
+<div style="padding: 0 12px; display: flex; flex-direction: column">
+<a href="DesktopCard.dc.html" style="display: flex; gap: 12px; padding: 12px 8px; border-radius: 12px; background: #FDEEE6; text-decoration: none; color: #15171A">
+<div style="width: 64px; height: 64px; border-radius: 10px; background: #EEF0EC; flex: none"></div>
+<div><div style="font-size: 15px; font-weight: 600">Набережная до маяка</div><div style="font-size: 13px; color: #4A4F55; margin-top: 3px">5,2 км · 24:10 · 4:39 /км</div><div style="font-size: 13px; color: #9A3412; font-weight: 600; margin-top: 3px">9 бегунов в группе</div></div>
+</a>
+<div style="display: flex; gap: 12px; padding: 12px 8px">
+<div style="width: 64px; height: 64px; border-radius: 10px; background: #EEF0EC; flex: none"></div>
+<div><div style="font-size: 15px; font-weight: 600">Круг по парку</div><div style="font-size: 13px; color: #4A4F55; margin-top: 3px">4,8 км · 26:45 · 5:34 /км</div><div style="font-size: 13px; color: #5B6168; margin-top: 3px">Пока только автор</div></div>
+</div>
+<div style="display: flex; gap: 12px; padding: 12px 8px">
+<div style="width: 64px; height: 64px; border-radius: 10px; background: #EEF0EC; flex: none"></div>
+<div><div style="font-size: 15px; font-weight: 600">Мост и обратно</div><div style="font-size: 13px; color: #4A4F55; margin-top: 3px">6,4 км · 31:20 · 4:54 /км</div><div style="font-size: 13px; color: #5B6168; margin-top: 3px">4 бегуна в группе</div></div>
+</div>
+</div>
+</aside>
+<div style="flex: 999 1 560px; min-width: 0; min-height: 640px; position: relative; background: #EEF0EC; overflow: hidden">
+<svg role="img" aria-label="Треки 5 км на карте, выбранный выделен" width="100%" height="100%" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0">
+<path d="M-20 520 C150 470 300 580 480 510 S760 430 1020 480 L1020 640 L-20 680 Z" fill="#D6E6F0"></path>
+<g stroke="#FFFFFF" stroke-width="10" fill="none"><path d="M0 220 L1000 180"></path><path d="M0 380 L1000 350"></path><path d="M260 0 L300 800"></path><path d="M720 0 L680 800"></path></g>
+<g stroke="#FFFFFF" stroke-width="4" fill="none"><path d="M0 300 L1000 270"></path><path d="M120 0 L150 800"></path><path d="M500 0 L490 800"></path><path d="M860 0 L880 800"></path></g>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M330 200 L345 330 C420 350 500 320 560 300 L548 190 C470 180 400 195 330 200 Z" stroke="#FFFFFF" stroke-width="8"></path>
+<path d="M330 200 L345 330 C420 350 500 320 560 300 L548 190 C470 180 400 195 330 200 Z" stroke="#E8A27C" stroke-width="4"></path>
+<path d="M80 420 C120 360 200 300 260 290 S360 260 400 240" stroke="#FFFFFF" stroke-width="8"></path>
+<path d="M80 420 C120 360 200 300 260 290 S360 260 400 240" stroke="#E8A27C" stroke-width="4"></path>
+<path d="M120 560 C230 530 360 580 500 555 S760 500 900 530" stroke="#FFFFFF" stroke-width="11"></path>
+<path d="M120 560 C230 530 360 580 500 555 S760 500 900 530" stroke="#C2410C" stroke-width="7"></path>
+</g>
+<circle cx="120" cy="560" r="9" fill="#FFFFFF" stroke="#15171A" stroke-width="3.5"></circle>
+<circle cx="900" cy="530" r="9" fill="#15171A"></circle>
+</svg>
+<div style="position: absolute; left: 40%; top: 60%; padding: 6px 10px; border-radius: 8px; background: #15171A; color: #FFFFFF; font-size: 13px; font-weight: 600">Набережная до маяка · 5,2 км</div>
+<div style="position: absolute; right: 16px; top: 16px; display: flex; flex-direction: column; background: #FFFFFF; border-radius: 10px; overflow: hidden">
+<button aria-label="Приблизить" style="width: 40px; height: 40px; border: 0; border-bottom: 1px solid #ECEEF0; background: #FFFFFF; font: inherit; font-size: 20px">+</button>
+<button aria-label="Отдалить" style="width: 40px; height: 40px; border: 0; background: #FFFFFF; font: inherit; font-size: 20px">−</button>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

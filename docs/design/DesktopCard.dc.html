@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Десктоп: карточка трека</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#C2410C}a:hover{color:#9A3412}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; font-family: Inter, system-ui, sans-serif; color: #15171A; display: flex; flex-direction: column">
+<header style="height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid #ECEEF0; flex-wrap: wrap">
+<div style="font-size: 18px; font-weight: 700">[Название]</div>
+<nav style="display: flex; gap: 20px; font-size: 15px">
+<a href="DesktopMain.dc.html" style="color: #15171A; font-weight: 600; text-decoration: none">Карта</a>
+<a href="#" style="color: #4A4F55; text-decoration: none">Рейтинги</a>
+</nav>
+<a href="Processing.dc.html" style="margin-left: auto; height: 40px; padding: 0 16px; border-radius: 10px; background: #C2410C; color: #FFFFFF; font-size: 14px; font-weight: 600; display: flex; align-items: center; text-decoration: none">Загрузить трек</a>
+<a href="#" aria-label="Профиль" style="width: 40px; height: 40px; border-radius: 20px; background: #F0F1F2; display: flex; align-items: center; justify-content: center; color: #15171A"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg></a>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap">
+<aside style="flex: 1 1 380px; max-width: 460px; border-right: 1px solid #ECEEF0; display: flex; flex-direction: column; gap: 16px; padding: 16px 24px 24px">
+<a href="DesktopMain.dc.html" style="font-size: 14px; font-weight: 500; text-decoration: none; padding: 8px 0">← К списку маршрутов</a>
+<div>
+<h1 style="margin: 0; font-size: 26px; line-height: 1.2; font-weight: 700">Набережная до маяка</h1>
+<div style="font-size: 14px; color: #5B6168; margin-top: 6px">Алексей П. · пробежка 2 ноября · исходный трек</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Дистанция</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">5,2 км</div></div>
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Время</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">24:10</div></div>
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Темп</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">4:39</div></div>
+<div style="background: #F6F7F5; border-radius: 12px; padding: 10px"><div style="font-size: 12px; color: #5B6168">Набор</div><div style="font-size: 17px; font-weight: 700; margin-top: 2px">38 м</div></div>
+</div>
+<div style="padding: 12px 14px; border-radius: 12px; background: #FDEEE6; font-size: 14px; line-height: 1.45; color: #7C2D12">Пробегите этот маршрут и загрузите свой трек — попытка засчитается сама.</div>
+<div style="display: flex; gap: 8px">
+<button style="flex: 1; height: 44px; border-radius: 10px; border: 1.5px solid #15171A; background: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">Скачать GPX</button>
+<a href="CheckFail.dc.html" style="flex: 1; height: 44px; border-radius: 10px; border: 1.5px solid #D0D3D6; color: #15171A; text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; box-sizing: border-box">Проверить мою пробежку</a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">Группа маршрута</h2>
+<div style="font-size: 14px; color: #5B6168">9 бегунов</div>
+</div>
+<div style="display: flex; flex-direction: column; font-size: 14px">
+<div style="display: grid; grid-template-columns: 24px 1fr 60px 48px; gap: 8px; padding: 10px 0; border-bottom: 1px solid #ECEEF0; color: #5B6168; font-size: 12px"><div>#</div><div>Бегун</div><div style="text-align: right">Время</div><div style="text-align: right">Темп</div></div>
+<div style="display: grid; grid-template-columns: 24px 1fr 60px 48px; gap: 8px; padding: 10px 0; border-bottom: 1px solid #ECEEF0; align-items: center"><div style="font-weight: 700; color: #C2410C">1</div><div><span style="font-weight: 600">Ирина К.</span> <span style="font-size: 12px; color: #9A3412; font-weight: 600">король маршрута</span></div><div style="text-align: right; font-weight: 700">23:41</div><div style="text-align: right; color: #5B6168">4:33</div></div>
+<div style="display: grid; grid-template-columns: 24px 1fr 60px 48px; gap: 8px; padding: 10px 0; border-bottom: 1px solid #ECEEF0; align-items: center"><div style="font-weight: 700">2</div><div><span style="font-weight: 600">Дмитрий С.</span> <span style="font-size: 12px; color: #9A3412; font-weight: 600">превзошёл</span></div><div style="text-align: right; font-weight: 700">23:58</div><div style="text-align: right; color: #5B6168">4:37</div></div>
+<div style="display: grid; grid-template-columns: 24px 1fr 60px 48px; gap: 8px; padding: 10px 8px; margin: 0 -8px; border-bottom: 1px solid #ECEEF0; align-items: center; background: #F6F7F5"><div style="font-weight: 700">3</div><div><span style="font-weight: 600">Алексей П.</span> <span style="font-size: 12px; color: #5B6168">автор</span></div><div style="text-align: right; font-weight: 700">24:10</div><div style="text-align: right; color: #5B6168">4:39</div></div>
+<div style="display: grid; grid-template-columns: 24px 1fr 60px 48px; gap: 8px; padding: 10px 0; border-bottom: 1px solid #ECEEF0; align-items: center"><div style="font-weight: 700">4</div><div style="font-weight: 600">Мария Л.</div><div style="text-align: right; font-weight: 700">24:52</div><div style="text-align: right; color: #5B6168">4:47</div></div>
+<button style="height: 44px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: #C2410C; text-align: left; padding: 0">Показать всех 9</button>
+</div>
+</aside>
+<div style="flex: 999 1 560px; min-width: 0; min-height: 640px; position: relative; background: #EEF0EC; overflow: hidden">
+<svg role="img" aria-label="Выбранный маршрут крупно, остальные треки приглушены" width="100%" height="100%" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0">
+<path d="M-20 520 C150 470 300 580 480 510 S760 430 1020 480 L1020 640 L-20 680 Z" fill="#D6E6F0"></path>
+<g stroke="#FFFFFF" stroke-width="10" fill="none"><path d="M0 220 L1000 180"></path><path d="M0 380 L1000 350"></path><path d="M260 0 L300 800"></path><path d="M720 0 L680 800"></path></g>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M330 200 L345 330 C420 350 500 320 560 300 L548 190 C470 180 400 195 330 200 Z" stroke="#B4B8BC" stroke-width="3"></path>
+<path d="M120 560 C230 530 360 580 500 555 S760 500 900 530" stroke="#FFFFFF" stroke-width="13"></path>
+<path d="M120 560 C230 530 360 580 500 555 S760 500 900 530" stroke="#C2410C" stroke-width="8"></path>
+</g>
+<g fill="#FFFFFF" stroke="#15171A" stroke-width="1.5"><circle cx="300" cy="552" r="11"></circle><circle cx="480" cy="557" r="11"></circle><circle cx="660" cy="525" r="11"></circle><circle cx="820" cy="512" r="11"></circle></g>
+<g font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#15171A"><text x="300" y="556">1</text><text x="480" y="561">2</text><text x="660" y="529">3</text><text x="820" y="516">4</text></g>
+<circle cx="120" cy="560" r="10" fill="#FFFFFF" stroke="#15171A" stroke-width="4"></circle>
+<circle cx="900" cy="530" r="10" fill="#15171A"></circle>
+</svg>
+<div style="position: absolute; left: 24px; bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap">
+<div style="padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.94); font-size: 13px">Белые метки — километры</div>
+<div style="padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.94); font-size: 13px">Старт и финиш — без скрытых зон автора</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

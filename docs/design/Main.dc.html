@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Главная: карта</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#C2410C}a:hover{color:#9A3412}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EEF0EC; font-family: Inter, system-ui, sans-serif; color: #15171A">
+<svg aria-hidden="true" width="390" height="844" viewBox="0 0 390 844" style="position: absolute; inset: 0">
+<path d="M-10 520 C80 470 150 560 240 500 S360 430 400 470 L400 600 L-10 640 Z" fill="#D6E6F0"></path>
+<g stroke="#FFFFFF" stroke-width="8" fill="none"><path d="M0 250 L390 210"></path><path d="M0 380 L390 360"></path><path d="M120 0 L150 844"></path><path d="M290 0 L260 844"></path><path d="M0 700 L390 690"></path></g>
+<g stroke="#FFFFFF" stroke-width="3" fill="none"><path d="M0 310 L390 290"></path><path d="M60 0 L80 844"></path><path d="M210 0 L200 844"></path></g>
+</svg>
+<svg role="img" aria-label="Треки 5 км в видимой области, один выбран" width="390" height="844" viewBox="0 0 390 844" style="position: absolute; inset: 0">
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M30 470 C70 455 110 485 160 470 S250 430 300 450 S350 480 370 455" stroke="#FFFFFF" stroke-width="7"></path>
+<path d="M30 470 C70 455 110 485 160 470 S250 430 300 450 S350 480 370 455" stroke="#E8A27C" stroke-width="4"></path>
+<path d="M140 230 L150 330 C200 345 240 320 270 300 L262 220 C220 210 180 225 140 230 Z" stroke="#FFFFFF" stroke-width="7"></path>
+<path d="M140 230 L150 330 C200 345 240 320 270 300 L262 220 C220 210 180 225 140 230 Z" stroke="#E8A27C" stroke-width="4"></path>
+<path d="M40 400 C60 360 90 300 125 290 S190 270 210 250" stroke="#FFFFFF" stroke-width="7"></path>
+<path d="M40 400 C60 360 90 300 125 290 S190 270 210 250" stroke="#E8A27C" stroke-width="4"></path>
+<path d="M60 545 C110 520 170 560 230 540 S330 500 360 520" stroke="#FFFFFF" stroke-width="9"></path>
+<path d="M60 545 C110 520 170 560 230 540 S330 500 360 520" stroke="#C2410C" stroke-width="6"></path>
+</g>
+<circle cx="60" cy="545" r="7" fill="#FFFFFF" stroke="#15171A" stroke-width="3"></circle>
+<circle cx="360" cy="520" r="7" fill="#15171A"></circle>
+</svg>
+<div style="position: absolute; left: 150px; top: 498px; padding: 4px 8px; border-radius: 8px; background: #15171A; color: #FFFFFF; font-size: 12px; font-weight: 600">5,2 км · 24:10 · 9 бегунов</div>
+<div style="position: absolute; left: 0; right: 0; top: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 8px">
+<label style="flex: 1; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; background: #FFFFFF; border-radius: 12px; box-sizing: border-box">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6168" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input placeholder="Маршрут, автор или город" style="border: 0; outline: 0; font: inherit; font-size: 15px; width: 100%; background: transparent">
+</label>
+<button aria-label="Все фильтры" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15171A" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"></path></svg></button>
+</div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; font-size: 13px"><span style="font-weight: 600">Дистанция</span><span style="color: #5B6168">от 3 до 7,5 км</span></div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px">
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">1</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #15171A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">5</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">10</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">21</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 14px">21+</button>
+<button style="height: 40px; border: 0; border-radius: 10px; background: #F0F1F2; font: inherit; font-size: 13px">Своя</button>
+</div>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 72px; background: #FFFFFF; border-radius: 20px 20px 0 0; padding: 10px 16px 8px; box-shadow: 0 -2px 12px rgba(0,0,0,0.08)">
+<div style="width: 40px; height: 4px; border-radius: 2px; background: #D0D3D6; margin: 0 auto 12px"></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px">
+<div style="font-size: 17px; font-weight: 600">16 маршрутов в области</div>
+<div style="font-size: 13px; color: #5B6168">Популярные</div>
+</div>
+<a href="Card.dc.html" style="display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEF0; text-decoration: none; color: #15171A">
+<div style="width: 56px; height: 56px; border-radius: 10px; background: #EEF0EC; flex: none"></div>
+<div style="flex: 1">
+<div style="font-size: 15px; font-weight: 600">Набережная до маяка</div>
+<div style="font-size: 13px; color: #5B6168; margin-top: 2px">5,2 км · 24:10 · 4:39 /км</div>
+<div style="font-size: 13px; color: #C2410C; margin-top: 2px; font-weight: 500">9 бегунов в группе</div>
+</div>
+</a>
+<div style="display: flex; gap: 12px; padding: 10px 0">
+<div style="width: 56px; height: 56px; border-radius: 10px; background: #EEF0EC; flex: none"></div>
+<div style="flex: 1">
+<div style="font-size: 15px; font-weight: 600">Круг по парку</div>
+<div style="font-size: 13px; color: #5B6168; margin-top: 2px">4,8 км · 26:45 · 5:34 /км</div>
+<div style="font-size: 13px; color: #5B6168; margin-top: 2px">Пока только автор</div>
+</div>
+</div>
+</div>
+<nav style="position: absolute; left: 0; right: 0; bottom: 0; height: 72px; background: #FFFFFF; border-top: 1px solid #ECEEF0; display: flex; align-items: center; justify-content: space-around; font-size: 11px">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #C2410C; text-decoration: none; font-weight: 600"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"></path></svg>Карта</a>
+<a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5B6168; text-decoration: none"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V10M12 20V4M18 20v-7"></path></svg>Рейтинги</a>
+<a href="Processing.dc.html" aria-label="Загрузить трек" style="width: 52px; height: 52px; border-radius: 26px; background: #C2410C; display: flex; align-items: center; justify-content: center; margin-top: -18px"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></a>
+<a href="#" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5B6168; text-decoration: none"><span aria-label="2 новые попытки на ваши треки" style="position: absolute; top: -6px; right: 2px; min-width: 18px; height: 18px; border-radius: 9px; background: #C2410C; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">2</span><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>Профиль</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
