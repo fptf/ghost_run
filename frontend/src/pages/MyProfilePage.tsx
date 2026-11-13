@@ -6,6 +6,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { api } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { useMe } from "../auth/useMe";
+import { AchievementShowcase } from "../components/AchievementShowcase";
 import { ProfileView } from "../components/ProfileView";
 import { TrackList } from "../components/TrackList";
 
@@ -77,11 +78,20 @@ export function MyProfilePage() {
           ))}
         </div>
         <div role="tabpanel">
-          {feed === "tracks" ? (
-            <TrackList tracks={tracks.data ?? []} empty={t("profile.empty.tracks")} showStatus />
-          ) : (
-            <div className="empty">{t(`profile.empty.${feed}`)}</div>
+          {feed === "tracks" && (
+            <TrackList
+              tracks={(tracks.data ?? []).filter((x) => !x.is_attempt)}
+              empty={t("profile.empty.tracks")}
+              showStatus
+            />
           )}
+          {feed === "attempts" && (
+            <TrackList
+              tracks={(tracks.data ?? []).filter((x) => x.is_attempt)}
+              empty={t("profile.empty.attempts")}
+            />
+          )}
+          {feed === "achievements" && <AchievementShowcase userId={me.data.id} />}
         </div>
       </section>
     </main>

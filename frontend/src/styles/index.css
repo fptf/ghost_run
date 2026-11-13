@@ -1767,3 +1767,115 @@ fieldset.field legend {
   font-weight: 800;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
+
+/* ---------- Ачивки и результат ---------- */
+
+.achievement-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.result-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 20px;
+  border-radius: var(--r-xl);
+  text-align: center;
+}
+
+.result-hero--win {
+  background: linear-gradient(160deg, #fdeee6, #fff);
+  border: 1px solid #f6c9ad;
+}
+
+.result-hero--plain {
+  background: var(--surface);
+}
+
+.result-hero__label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ok);
+}
+
+.result-hero__diff {
+  font-size: 56px;
+  line-height: 1.05;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-hero--win .result-hero__diff {
+  color: var(--accent);
+}
+
+.result-hero__sub {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.result-hero__vs {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-hero__route {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.nav-icon {
+  position: relative;
+  display: inline-grid;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-pill--fresh {
+  background: var(--accent);
+  color: #fff;
+}
+
+.showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.showcase__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.showcase__list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+}

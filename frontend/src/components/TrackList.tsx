@@ -35,6 +35,11 @@ export function TrackList({
                 </span>
               </span>
             ) : null}
+            {tr.new_attempts > 0 && (
+              <span className="status-pill status-pill--fresh">
+                {t("profile.freshAttempts", { count: tr.new_attempts })}
+              </span>
+            )}
             {showStatus && (
               <span className={`status-pill status-pill--${tr.status}`}>
                 {tr.status === "published"

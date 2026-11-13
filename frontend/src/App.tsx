@@ -10,6 +10,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { MyProfilePage } from "./pages/MyProfilePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PublicProfilePage } from "./pages/PublicProfilePage";
+import { ResultPage } from "./pages/ResultPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UploadPage } from "./pages/UploadPage";
 
@@ -42,6 +43,14 @@ export function App({ queryClient = new QueryClient() }: { queryClient?: QueryCl
               <Route path="/login" element={<LoginPage />} />
               <Route path="/users/:userId" element={<PublicProfilePage />} />
               <Route path="/tracks/:trackId" element={<TrackPage />} />
+              <Route
+                path="/tracks/:trackId/result"
+                element={
+                  <RequireAuth>
+                    <ResultPage />
+                  </RequireAuth>
+                }
+              />
               <Route
                 path="/tracks/:trackId/check"
                 element={

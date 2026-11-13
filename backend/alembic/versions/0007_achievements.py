@@ -62,16 +62,14 @@ def upgrade() -> None:
     )
     op.create_index("ix_user_achievements_user", "user_achievements", ["user_id"])
     # Ачивки за уже засчитанные попытки (после пересопоставления дампа)
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO user_achievements (user_id, achievement_id, track_id, awarded_at)
         SELECT t.user_id, a.id, t.id, coalesce(at.activated_at, now())
         FROM attempts at
         JOIN tracks t ON t.id = at.track_id
         JOIN achievements a ON a.code = 'outperformed'
         WHERE at.state = 'active' AND at.beat AND NOT at.by_author
-        """
-    )
+        """)
 
 
 def downgrade() -> None:

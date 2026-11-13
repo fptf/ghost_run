@@ -53,11 +53,16 @@ function EditForm({ track }: { track: TrackDetail }) {
     queryClient.setQueryData(["track", track.id], data);
     void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
     void queryClient.invalidateQueries({ queryKey: ["me"] });
-    // Форма закрывается: открываем просмотр трека.
-    navigate(`/tracks/${track.id}`, {
-      replace: true,
-      state: { flash: isDraft ? "published" : "saved" },
-    });
+    // Форма закрывается: новая попытка в группе — экран результата, иначе просмотр трека.
+    if (isDraft && data.attempt_of) {
+      void queryClient.invalidateQueries({ queryKey: ["group"] });
+      navigate(`/tracks/${track.id}/result`, { replace: true });
+    } else {
+      navigate(`/tracks/${track.id}`, {
+        replace: true,
+        state: { flash: isDraft ? "published" : "saved" },
+      });
+    }
   }
 
   async function onPhoto(e: ChangeEvent<HTMLInputElement>) {

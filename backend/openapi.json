@@ -1540,6 +1540,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_attempt": {
+            "default": false,
+            "title": "Is Attempt",
+            "type": "boolean"
+          },
           "is_owner": {
             "title": "Is Owner",
             "type": "boolean"
@@ -1753,6 +1758,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_attempt": {
+            "default": false,
+            "title": "Is Attempt",
+            "type": "boolean"
           },
           "new_attempts": {
             "default": 0,

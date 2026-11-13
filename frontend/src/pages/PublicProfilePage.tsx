@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 
 import { api } from "../api/client";
+import { AchievementShowcase } from "../components/AchievementShowcase";
 import { ProfileView } from "../components/ProfileView";
 import { TrackList } from "../components/TrackList";
 
@@ -39,6 +40,7 @@ export function PublicProfilePage() {
       {profile.data && (
         <>
           <ProfileView profile={profile.data} />
+          <AchievementShowcase userId={profile.data.id} />
           <section className="card">
             <h2 className="card__title">{t("profile.tracks")}</h2>
             <TrackList tracks={tracks.data ?? []} empty={t("profile.noPublicTracks")} />

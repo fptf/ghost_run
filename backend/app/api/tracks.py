@@ -86,6 +86,7 @@ class TrackSummary(BaseModel):
     category: str | None
     created_at: datetime
     new_attempts: int = 0  # новые попытки других бегунов (только в «Моих треках»)
+    is_attempt: bool = False  # трек засчитан как попытка в группе маршрута
 
 
 class OwnerExtras(BaseModel):
@@ -181,6 +182,7 @@ def _summary(track: Track) -> TrackSummary:
         avg_pace_s_per_km=track.avg_pace_s_per_km,
         category=track.category,
         created_at=track.created_at,
+        is_attempt=track.parent_track_id is not None,
     )
 
 

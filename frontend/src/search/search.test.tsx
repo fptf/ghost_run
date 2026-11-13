@@ -133,6 +133,7 @@ function detail() {
     match: null,
     attempt_of: null,
     group_runners: 2,
+    achievements: [],
   };
 }
 

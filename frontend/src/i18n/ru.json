@@ -71,7 +71,15 @@
       "achievements": "Ачивок пока нет."
     },
     "tracks": "Треки",
-    "noPublicTracks": "Публичных треков пока нет."
+    "noPublicTracks": "Публичных треков пока нет.",
+    "newAttemptsBadge_one": "{{count}} новая попытка",
+    "newAttemptsBadge_few": "{{count}} новые попытки",
+    "newAttemptsBadge_many": "{{count}} новых попыток",
+    "newAttemptsBadge_other": "{{count}} новой попытки",
+    "freshAttempts_one": "+{{count}} новая",
+    "freshAttempts_few": "+{{count}} новые",
+    "freshAttempts_many": "+{{count}} новых",
+    "freshAttempts_other": "+{{count}} новых"
   },
   "settings": {
     "title": "Настройки",
@@ -265,5 +273,28 @@
       "lengthOk": "Длина отличается на {{value}}%",
       "lengthFail": "Длина отличается на {{value}}%, допустимо {{required}}%"
     }
+  },
+  "result": {
+    "title": "Результат",
+    "none": "Трек не засчитан как попытка",
+    "toTrack": "К треку",
+    "achievement": "Ачивка «{{title}}»",
+    "counted": "Попытка засчитана",
+    "equal": "Вровень с автором",
+    "missing": "столько не хватило до автора",
+    "versus": "{{mine}} против {{theirs}}",
+    "versusAuthor": "{{vs}} у {{author}}",
+    "onRoute": "на маршруте «{{route}}»",
+    "youNewPlace": "Вы · новое место",
+    "place_one": "Место в группе: {{place}} из {{count}}",
+    "place_few": "Место в группе: {{place}} из {{count}}",
+    "place_many": "Место в группе: {{place}} из {{count}}",
+    "place_other": "Место в группе: {{place}} из {{count}}",
+    "toBest": "До лучшего результата в группе {{gap}} — лучший {{best}}",
+    "share": "Поделиться",
+    "copied": "Ссылка скопирована",
+    "wholeGroup": "Вся группа маршрута",
+    "shareWin": "Пробежал «{{route}}» на {{diff}} быстрее автора!",
+    "shareRun": "Пробежал «{{route}}» за {{time}}"
   }
 }

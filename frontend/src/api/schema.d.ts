@@ -281,6 +281,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/tracks/{track_id}/result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read Result */
+    get: operations["read_result_tracks__track_id__result_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/users/{user_id}": {
     parameters: {
       query?: never;
@@ -290,6 +307,23 @@ export interface paths {
     };
     /** Read Profile */
     get: operations["read_profile_users__user_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/users/{user_id}/achievements": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** User Achievements */
+    get: operations["user_achievements_users__user_id__achievements_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -319,6 +353,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AchievementBadge */
+    AchievementBadge: {
+      /** Code */
+      code: string;
+      /** Icon */
+      icon: string;
+      /** Title */
+      title: string;
+    };
     /** AuthConfig */
     AuthConfig: {
       /** Dev Login Enabled */
@@ -665,6 +708,44 @@ export interface components {
       name: string;
       stats: components["schemas"]["ProfileStats"];
     };
+    /** ResultAchievement */
+    ResultAchievement: {
+      /** Code */
+      code: string;
+      /** Icon */
+      icon: string;
+      /** Title */
+      title: string;
+    };
+    /** ResultResponse */
+    ResultResponse: {
+      /** Achievements */
+      achievements: components["schemas"]["ResultAchievement"][];
+      /** Best Time S */
+      best_time_s: number;
+      /** By Author */
+      by_author: boolean;
+      /** Diff S */
+      diff_s: number;
+      /** Gap To Best S */
+      gap_to_best_s: number;
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome: "beat" | "slower" | "equal";
+      /** Place */
+      place: number;
+      /** Result Time S */
+      result_time_s: number;
+      /** Root Time S */
+      root_time_s: number;
+      route: components["schemas"]["RootRef"];
+      /** Rows */
+      rows: components["schemas"]["GroupRow"][];
+      /** Runners */
+      runners: number;
+    };
     /** RootRef */
     RootRef: {
       author: components["schemas"]["Author"];
@@ -721,6 +802,36 @@ export interface components {
       /** Total */
       total: number;
     };
+    /** ShowcaseEntry */
+    ShowcaseEntry: {
+      /** Code */
+      code: string;
+      /** Count */
+      count: number;
+      /** Description */
+      description: string;
+      /** Icon */
+      icon: string;
+      /** Items */
+      items: components["schemas"]["ShowcaseItem"][];
+      /** Title */
+      title: string;
+    };
+    /** ShowcaseItem */
+    ShowcaseItem: {
+      /**
+       * Awarded At
+       * Format: date-time
+       */
+      awarded_at: string;
+      /** Title */
+      title: string | null;
+      /**
+       * Track Id
+       * Format: uuid
+       */
+      track_id: string;
+    };
     /** Split */
     Split: {
       /** Distance M */
@@ -749,6 +860,8 @@ export interface components {
     };
     /** TrackDetail */
     TrackDetail: {
+      /** Achievements */
+      achievements: components["schemas"]["AchievementBadge"][];
       attempt_of: components["schemas"]["RootRef"] | null;
       author: components["schemas"]["Author"];
       /** Avg Pace S Per Km */
@@ -776,6 +889,11 @@ export interface components {
        * Format: uuid
        */
       id: string;
+      /**
+       * Is Attempt
+       * @default false
+       */
+      is_attempt: boolean;
       /** Is Owner */
       is_owner: boolean;
       /** Km Marks */
@@ -783,6 +901,11 @@ export interface components {
       match: components["schemas"]["MatchInfo"] | null;
       /** Moving Time S */
       moving_time_s: number | null;
+      /**
+       * New Attempts
+       * @default 0
+       */
+      new_attempts: number;
       owner: components["schemas"]["OwnerExtras"] | null;
       /** Photos */
       photos: components["schemas"]["Photo"][];
@@ -827,6 +950,16 @@ export interface components {
        * Format: uuid
        */
       id: string;
+      /**
+       * Is Attempt
+       * @default false
+       */
+      is_attempt: boolean;
+      /**
+       * New Attempts
+       * @default 0
+       */
+      new_attempts: number;
       /** Reject Message */
       reject_message: string | null;
       /** Reject Reason */
@@ -1656,6 +1789,44 @@ export interface operations {
       };
     };
   };
+  read_result_tracks__track_id__result_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResultResponse"];
+        };
+      };
+      /** @description Нет результата */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   read_profile_users__user_id__get: {
     parameters: {
       query?: never;
@@ -1677,6 +1848,44 @@ export interface operations {
         };
       };
       /** @description Пользователь не найден */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  user_achievements_users__user_id__achievements_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ShowcaseEntry"][];
+        };
+      };
+      /** @description Нет бегуна */
       404: {
         headers: {
           [name: string]: unknown;

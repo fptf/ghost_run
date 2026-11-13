@@ -69,6 +69,11 @@ function track(overrides: Record<string, unknown> = {}) {
       hidden_zone: { lat: 42.9, lon: 76.9, radius_m: 300 },
       fully_hidden: false,
     },
+    km_marks: [],
+    match: null,
+    attempt_of: null,
+    group_runners: 0,
+    achievements: [],
     ...overrides,
   };
 }

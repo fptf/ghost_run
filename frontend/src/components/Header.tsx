@@ -36,7 +36,19 @@ export function Header() {
         {status === "authenticated" ? (
           <>
             <Link to="/me" className="btn btn--ghost btn--sm" aria-label={t("nav.profile")}>
-              <Avatar name={me.data?.name ?? ""} url={me.data?.avatar_url} small />
+              <span className="nav-icon">
+                <Avatar name={me.data?.name ?? ""} url={me.data?.avatar_url} small />
+                {(me.data?.new_attempts ?? 0) > 0 && (
+                  <span
+                    className="nav-badge"
+                    aria-label={t("profile.newAttemptsBadge", {
+                      count: me.data?.new_attempts ?? 0,
+                    })}
+                  >
+                    {me.data?.new_attempts}
+                  </span>
+                )}
+              </span>
             </Link>
           </>
         ) : (

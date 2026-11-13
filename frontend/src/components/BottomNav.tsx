@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router";
 
 import { useAuth } from "../auth/useAuth";
+import { useMe } from "../auth/useMe";
 
 function Icon({ d }: { d: string }) {
   return (
@@ -22,6 +23,8 @@ function Icon({ d }: { d: string }) {
 export function BottomNav() {
   const { t } = useTranslation();
   const { status } = useAuth();
+  const me = useMe();
+  const fresh = status === "authenticated" ? (me.data?.new_attempts ?? 0) : 0;
   return (
     <nav className="bottom-nav" aria-label={t("nav.main")}>
       <NavLink to="/" end className="bottom-nav__item">
@@ -29,7 +32,17 @@ export function BottomNav() {
         {t("nav.map")}
       </NavLink>
       <NavLink to={status === "authenticated" ? "/me" : "/login"} className="bottom-nav__item">
-        <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />
+        <span className="nav-icon">
+          <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />
+          {fresh > 0 && (
+            <span
+              className="nav-badge"
+              aria-label={t("profile.newAttemptsBadge", { count: fresh })}
+            >
+              {fresh}
+            </span>
+          )}
+        </span>
         {t("nav.profile")}
       </NavLink>
     </nav>

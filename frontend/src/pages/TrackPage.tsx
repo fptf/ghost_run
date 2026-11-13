@@ -89,6 +89,15 @@ export function TrackPage() {
           </Link>
         </div>
       )}
+      {tr.achievements.length > 0 && (
+        <div className="row">
+          {tr.achievements.map((a) => (
+            <span key={a.code} className="achievement-pill">
+              <span aria-hidden>⚡</span> {t("result.achievement", { title: a.title })}
+            </span>
+          ))}
+        </div>
+      )}
       {tr.attempt_of && (
         <p className="notice notice--info">
           {t("match.attemptOf")}{" "}
@@ -96,6 +105,12 @@ export function TrackPage() {
             «{tr.attempt_of.title ?? t("track.untitled")}»
           </Link>{" "}
           · {tr.attempt_of.author.name}
+          {tr.is_owner && (
+            <>
+              {" · "}
+              <Link to={`/tracks/${tr.id}/result`}>{t("result.title")}</Link>
+            </>
+          )}
         </p>
       )}
       {tr.status === "processing" && <p className="notice notice--info">{t("track.processing")}</p>}

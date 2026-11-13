@@ -70,6 +70,7 @@ function track(id: string, over: Record<string, unknown> = {}) {
     match: null,
     attempt_of: null,
     group_runners: 0,
+    achievements: [],
     ...over,
   };
 }
