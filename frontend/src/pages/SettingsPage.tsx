@@ -29,7 +29,7 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
   const [lat, setLat] = useState(me.home ? String(me.home.lat) : "");
   const [lon, setLon] = useState(me.home ? String(me.home.lon) : "");
   const [radius, setRadius] = useState(String(me.hide_radius_m ?? 300));
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function onSave(e: FormEvent) {
@@ -46,9 +46,9 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
     });
     if (data) {
       queryClient.setQueryData(["me"], data);
-      setMessage(t("settings.saved"));
+      setMessage({ ok: true, text: t("settings.saved") });
     } else {
-      setMessage(errorText(error, t("settings.saveFailed")));
+      setMessage({ ok: false, text: errorText(error, t("settings.saveFailed")) });
     }
   }
 
@@ -68,66 +68,119 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
   }
 
   return (
-    <main>
+    <main className="page">
       <h1>{t("settings.title")}</h1>
-      <form onSubmit={onSave}>
-        <label>
-          {t("settings.name")}
-          <input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          {t("settings.city")}
-          <input maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} />
-        </label>
-        <label>
-          {t("settings.about")}
-          <textarea maxLength={1000} value={about} onChange={(e) => setAbout(e.target.value)} />
-        </label>
+      <form className="stack" onSubmit={onSave}>
+        <section className="card">
+          <h2 className="card__title">{t("settings.profileSection")}</h2>
+          <label className="field">
+            {t("settings.name")}
+            <input
+              className="input"
+              required
+              maxLength={100}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            {t("settings.city")}
+            <input
+              className="input"
+              maxLength={100}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            {t("settings.about")}
+            <textarea
+              className="input"
+              maxLength={1000}
+              value={about}
+              onChange={(e) => setAbout(e.target.value)}
+            />
+          </label>
+        </section>
 
-        <fieldset>
-          <legend>{t("settings.privacy")}</legend>
-          <p>{t("settings.privacyHint")}</p>
-          <label>
-            {t("settings.lat")}
-            <input inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} />
-          </label>
-          <label>
-            {t("settings.lon")}
-            <input inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} />
-          </label>
-          <button type="button" onClick={useMyLocation}>
-            {t("settings.myLocation")}
-          </button>
-          <label>
+        <section className="card">
+          <h2 className="card__title">{t("settings.privacy")}</h2>
+          <p className="muted">{t("settings.privacyHint")}</p>
+          <div className="grid-2">
+            <label className="field">
+              {t("settings.lat")}
+              <input
+                className="input"
+                inputMode="decimal"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              {t("settings.lon")}
+              <input
+                className="input"
+                inputMode="decimal"
+                value={lon}
+                onChange={(e) => setLon(e.target.value)}
+              />
+            </label>
+          </div>
+          <div className="row">
+            <button type="button" className="btn btn--secondary btn--sm" onClick={useMyLocation}>
+              {t("settings.myLocation")}
+            </button>
+          </div>
+          <label className="field">
             {t("settings.radius", { min: RADIUS_MIN, max: RADIUS_MAX })}
             <input
+              className="input"
               type="number"
               step={10}
               value={radius}
               onChange={(e) => setRadius(e.target.value)}
             />
+            <span className="field__hint">{t("settings.radiusHint")}</span>
           </label>
-        </fieldset>
+        </section>
 
-        <button type="submit">{t("settings.save")}</button>
-        {message && <p role="status">{message}</p>}
+        <button type="submit" className="btn btn--primary btn--block">
+          {t("settings.save")}
+        </button>
+        {message && (
+          <p role="status" className={`notice notice--${message.ok ? "ok" : "error"}`}>
+            {message.text}
+          </p>
+        )}
       </form>
 
-      <section>
-        <h2>{t("settings.deleteTitle")}</h2>
+      <section className="card card--danger">
+        <h2 className="card__title">{t("settings.deleteTitle")}</h2>
         {!confirmDelete ? (
-          <button type="button" onClick={() => setConfirmDelete(true)}>
-            {t("settings.delete")}
-          </button>
+          <div className="row">
+            <button
+              type="button"
+              className="btn btn--secondary btn--sm"
+              onClick={() => setConfirmDelete(true)}
+            >
+              {t("settings.delete")}
+            </button>
+          </div>
         ) : (
           <>
-            <p>{t("settings.deleteWarning")}</p>
-            <button type="button" onClick={onDelete}>
-              {t("settings.deleteConfirm")}
-            </button>
-            <button type="button" onClick={() => setConfirmDelete(false)}>
-              {t("common.cancel")}
-            </button>
+            <p className="notice notice--error">{t("settings.deleteWarning")}</p>
+            <div className="row">
+              <button type="button" className="btn btn--danger btn--sm" onClick={onDelete}>
+                {t("settings.deleteConfirm")}
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => setConfirmDelete(false)}
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
           </>
         )}
       </section>
@@ -138,6 +191,12 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
 export function SettingsPage() {
   const { t } = useTranslation();
   const me = useMe();
-  if (!me.data) return <p>{t("common.loading")}</p>;
+  if (!me.data) {
+    return (
+      <main className="page">
+        <p className="muted">{t("common.loading")}</p>
+      </main>
+    );
+  }
   return <SettingsForm me={me.data} />;
 }

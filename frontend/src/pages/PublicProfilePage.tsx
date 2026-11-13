@@ -20,11 +20,15 @@ export function PublicProfilePage() {
     retry: false,
   });
 
-  if (profile.isPending) return <p>{t("common.loading")}</p>;
-  if (profile.isError) return <h1>{t("profile.notFound")}</h1>;
   return (
-    <main>
-      <ProfileView profile={profile.data} />
+    <main className="page">
+      {profile.isPending && <p className="muted">{t("common.loading")}</p>}
+      {profile.isError && (
+        <div className="card">
+          <h1>{t("profile.notFound")}</h1>
+        </div>
+      )}
+      {profile.data && <ProfileView profile={profile.data} />}
     </main>
   );
 }

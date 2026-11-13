@@ -55,28 +55,52 @@ export function LoginPage() {
   if (status === "authenticated") return <Navigate to={next} replace />;
 
   return (
-    <main>
-      <h1>{t("login.title")}</h1>
-      {config.data?.google_client_id ? (
-        <GoogleButton clientId={config.data.google_client_id} onCredential={onGoogle} />
-      ) : (
-        config.data && <p>{t("login.googleNotConfigured")}</p>
-      )}
-      {config.data?.dev_login_enabled && (
-        <form onSubmit={onDevSubmit} aria-label={t("login.devTitle")}>
-          <h2>{t("login.devTitle")}</h2>
-          <label>
-            {t("login.email")}
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-          <label>
-            {t("login.name")}
-            <input required value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <button type="submit">{t("login.devSubmit")}</button>
-        </form>
-      )}
-      {error && <p role="alert">{error}</p>}
+    <main className="page page--narrow">
+      <div className="card">
+        <div className="stack">
+          <h1>{t("login.title")}</h1>
+          <p className="muted">{t("login.subtitle")}</p>
+        </div>
+        {config.data?.google_client_id ? (
+          <GoogleButton clientId={config.data.google_client_id} onCredential={onGoogle} />
+        ) : (
+          config.data && <p className="notice notice--info">{t("login.googleNotConfigured")}</p>
+        )}
+        {config.data?.dev_login_enabled && (
+          <form className="stack" onSubmit={onDevSubmit} aria-label={t("login.devTitle")}>
+            <div className="divider">{t("login.devTitle")}</div>
+            <label className="field">
+              {t("login.email")}
+              <input
+                className="input"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              {t("login.name")}
+              <input
+                className="input"
+                required
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <button type="submit" className="btn btn--primary btn--block">
+              {t("login.devSubmit")}
+            </button>
+          </form>
+        )}
+        {error && (
+          <p role="alert" className="notice notice--error">
+            {error}
+          </p>
+        )}
+      </div>
     </main>
   );
 }

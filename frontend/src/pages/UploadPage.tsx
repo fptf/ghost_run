@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 export function UploadPage() {
   const { t } = useTranslation();
   return (
-    <main>
+    <main className="page">
       <h1>{t("upload.title")}</h1>
-      <p>{t("upload.soon")}</p>
+      <div className="empty">{t("upload.soon")}</div>
     </main>
   );
 }

@@ -187,10 +187,19 @@ def test_refresh_without_cookie(client: TestClient) -> None:
 # --- Requirement: Auth Rate Limit ------------------------------------------------
 
 
-def test_too_many_auth_attempts(client: TestClient) -> None:
-    codes = [client.get("/auth/config").status_code for _ in range(11)]
+def test_too_many_sign_in_attempts(client: TestClient) -> None:
+    body = {"email": f"{_sub()}@example.com", "name": "R"}
+    codes = [client.post("/auth/dev-login", json=body).status_code for _ in range(11)]
     assert codes[:10] == [200] * 10
     assert codes[10] == 429
+
+
+def test_session_refresh_is_not_rate_limited(client: TestClient) -> None:
+    """Обновление сессии идёт при каждой загрузке страницы — лимит входа на него не влияет."""
+    client.post("/auth/dev-login", json={"email": f"{_sub()}@example.com", "name": "R"})
+    codes = [client.post("/auth/refresh").status_code for _ in range(15)]
+    codes += [client.get("/auth/config").status_code for _ in range(15)]
+    assert set(codes) == {200}
 
 
 # --- Requirement: Roles ----------------------------------------------------------

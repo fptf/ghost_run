@@ -9,7 +9,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { t } = useTranslation();
 
-  if (status === "loading") return <p>{t("common.loading")}</p>;
+  if (status === "loading") {
+    return (
+      <main className="page">
+        <p className="muted">{t("common.loading")}</p>
+      </main>
+    );
+  }
   if (status === "guest") {
     const next = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?next=${next}`} replace />;

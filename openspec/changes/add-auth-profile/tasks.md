@@ -6,7 +6,7 @@
 - [x] 1.5 `GET/PATCH /me`, `GET /users/{id}` (публичная схема без email и дома)
 - [x] 1.6 Точка дома и радиус с проверкой границ из `privacy.hide_radius_m`
 - [x] 1.7 `DELETE /me` и реестр очистки (S3-префикс пользователя)
-- [x] 1.8 Лимит запросов на `/auth/*` через Redis
+- [x] 1.8 Лимит попыток входа через Redis (refresh под лимит не попадает)
 - [x] 1.9 CLI назначения роли
 
 ## 2. Frontend
@@ -15,12 +15,13 @@
 - [x] 2.3 Шапка с «Загрузить трек», заглушка `/upload` за входом
 - [x] 2.4 Профиль: статистика, ленты «Мои треки», «Мои попытки», «Ачивки» (пока пустые); публичный профиль
 - [x] 2.5 Настройки: имя, город, описание, точка дома (координаты, «Моё местоположение»), радиус, удаление аккаунта
+- [x] 2.6 Базовые стили по токенам макетов (акцент #C2410C, Inter), адаптив от 360 px, favicon
 
 ## 3. Tests
 - [x] 3.1 auth: First Google sign-in, Returning user, Invalid Google token
 - [x] 3.2 auth: Dev sign-in disabled / enabled
 - [x] 3.3 auth: Expired access token, Refresh token reuse, Sign out
-- [x] 3.4 auth: Too many attempts, Assign role
+- [x] 3.4 auth: Too many attempts, Page reloads keep the session, Assign role
 - [x] 3.5 auth: Guest starts upload (Vitest: редирект на вход и возврат на `/upload`)
 - [x] 3.6 profile: Guest views profile, Edit profile
 - [x] 3.7 profile: Radius out of range, Home point stays private

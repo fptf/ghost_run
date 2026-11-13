@@ -24,7 +24,9 @@ from app.infra.users_repo import get_or_create_user
 
 REFRESH_COOKIE = "refresh_token"
 
-router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(auth_rate_limit)])
+router = APIRouter(prefix="/auth", tags=["auth"])
+# Лимит только на вход: /auth/refresh вызывается при каждой загрузке страницы и защищён ротацией.
+SIGN_IN_LIMIT = [Depends(auth_rate_limit)]
 
 
 class AuthConfig(BaseModel):
@@ -83,7 +85,11 @@ def auth_config(cfg: ConfigDep) -> AuthConfig:
     return AuthConfig(google_client_id=cfg.google_client_id, dev_login_enabled=cfg.auth_dev_login)
 
 
-@router.post("/google", responses={401: {"description": "Недействительный токен Google"}})
+@router.post(
+    "/google",
+    dependencies=SIGN_IN_LIMIT,
+    responses={401: {"description": "Недействительный токен Google"}},
+)
 def sign_in_google(
     body: GoogleSignIn,
     response: Response,
@@ -98,7 +104,11 @@ def sign_in_google(
     return _sign_in(identity, response, cfg, db)
 
 
-@router.post("/dev-login", responses={404: {"description": "Dev-вход выключен"}})
+@router.post(
+    "/dev-login",
+    dependencies=SIGN_IN_LIMIT,
+    responses={404: {"description": "Dev-вход выключен"}},
+)
 def sign_in_dev(body: DevSignIn, response: Response, cfg: ConfigDep, db: DbDep) -> TokenResponse:
     if not cfg.auth_dev_login:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")

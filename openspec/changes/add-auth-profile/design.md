@@ -38,7 +38,7 @@
   Границы радиуса читаются из `privacy.hide_radius_m` при каждой валидации.
 - **Удаление аккаунта** — реестр функций очистки `(session, user_id) -> None`; сейчас в нём удаление
   объектов S3 с префиксом `users/{id}/`, остальное каскадом в БД. Следующие изменения добавляют свои.
-- **Лимит `/auth/*`** — счётчик в Redis на IP и минуту, лимит из `auth.rate_limit_per_minute`
+- **Лимит попыток входа** (`/auth/google`, `/auth/dev-login`) — счётчик в Redis на IP и минуту, лимит из `auth.rate_limit_per_minute`
   (новая миграция). IP — `request.client.host`; доверие к `X-Forwarded-For` настроим при деплое.
 - **Роли** назначаются `python -m app.scripts.set_role <email> <role>` до появления админки.
 - **Фронт**: `AuthProvider` восстанавливает сессию через `/auth/refresh` при старте, добавляет
