@@ -66,6 +66,8 @@ def _conditions(q: SearchQuery) -> list[ColumnElement[bool]]:
         Track.visibility == Visibility.public.value,
         Track.parent_track_id.is_(None),
         Track.display_geometry.is_not(None),
+        Track.deleted_at.is_(None),
+        Track.hidden_by_moderator.is_(False),
     ]
     if q.q:
         pattern = f"%{_escape_like(q.q.strip())}%"

@@ -33,6 +33,7 @@ EXPECTED_FROM_TZ = {
     "map.cluster_max_zoom": 11,  # design add-map-search
     "map.max_lines": 300,
     "search.new_days": 7,
+    "matching.direction_min_share": 0.9,  # design add-route-matching
 }
 
 

@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI
 
 from app.api.auth import router as auth_router
+from app.api.groups import router as groups_router
 from app.api.health import router as health_router
 from app.api.search import router as search_router
 from app.api.tracks import router as tracks_router
@@ -18,6 +19,7 @@ def create_app() -> FastAPI:
     app.include_router(users_router)
     app.include_router(search_router)
     app.include_router(tracks_router)
+    app.include_router(groups_router)
     app.add_middleware(BodySizeLimit, max_bytes=UPLOAD_BODY_LIMIT)
     if get_config().auth_dev_login:
         logging.getLogger(__name__).warning("AUTH_DEV_LOGIN включён — не используйте в проде")

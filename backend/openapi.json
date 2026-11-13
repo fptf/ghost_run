@@ -85,6 +85,181 @@
         "title": "Body_upload_track_tracks_post",
         "type": "object"
       },
+      "CheckRequest": {
+        "properties": {
+          "track_id": {
+            "format": "uuid",
+            "title": "Track Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "track_id"
+        ],
+        "title": "CheckRequest",
+        "type": "object"
+      },
+      "CheckResponse": {
+        "properties": {
+          "corridor": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corridor"
+          },
+          "deviation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Deviation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diff_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff S"
+          },
+          "matched": {
+            "title": "Matched",
+            "type": "boolean"
+          },
+          "result_time_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Time S"
+          },
+          "route": {
+            "$ref": "#/components/schemas/RootRef"
+          },
+          "route_line": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LineGeometry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/CheckRule"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "track_id": {
+            "format": "uuid",
+            "title": "Track Id",
+            "type": "string"
+          },
+          "track_line": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LineGeometry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "track_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Started At"
+          },
+          "track_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Title"
+          }
+        },
+        "required": [
+          "matched",
+          "route",
+          "track_id",
+          "track_title",
+          "track_started_at",
+          "rules",
+          "deviation",
+          "result_time_s",
+          "diff_s",
+          "route_line",
+          "corridor",
+          "track_line"
+        ],
+        "title": "CheckResponse",
+        "type": "object"
+      },
+      "CheckRule": {
+        "properties": {
+          "code": {
+            "enum": [
+              "start",
+              "finish",
+              "corridor",
+              "direction",
+              "length"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "required": {
+            "title": "Required",
+            "type": "number"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "ok",
+          "value",
+          "required"
+        ],
+        "title": "CheckRule",
+        "type": "object"
+      },
       "Cluster": {
         "properties": {
           "count": {
@@ -129,6 +304,29 @@
         "title": "DevSignIn",
         "type": "object"
       },
+      "Deviation": {
+        "properties": {
+          "km": {
+            "title": "Km",
+            "type": "number"
+          },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lon",
+          "lat",
+          "km"
+        ],
+        "title": "Deviation",
+        "type": "object"
+      },
       "GoogleSignIn": {
         "properties": {
           "id_token": {
@@ -141,6 +339,107 @@
           "id_token"
         ],
         "title": "GoogleSignIn",
+        "type": "object"
+      },
+      "GroupResponse": {
+        "properties": {
+          "root": {
+            "$ref": "#/components/schemas/RootRef"
+          },
+          "root_distance_m": {
+            "title": "Root Distance M",
+            "type": "number"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GroupRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "runners": {
+            "title": "Runners",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "root",
+          "root_distance_m",
+          "runners",
+          "rows"
+        ],
+        "title": "GroupResponse",
+        "type": "object"
+      },
+      "GroupRow": {
+        "properties": {
+          "beat": {
+            "title": "Beat",
+            "type": "boolean"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "is_author": {
+            "title": "Is Author",
+            "type": "boolean"
+          },
+          "is_root": {
+            "title": "Is Root",
+            "type": "boolean"
+          },
+          "is_viewer": {
+            "title": "Is Viewer",
+            "type": "boolean"
+          },
+          "pace_s_per_km": {
+            "title": "Pace S Per Km",
+            "type": "number"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          },
+          "runner": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "time_s": {
+            "title": "Time S",
+            "type": "number"
+          },
+          "track_id": {
+            "format": "uuid",
+            "title": "Track Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "place",
+          "runner",
+          "track_id",
+          "time_s",
+          "pace_s_per_km",
+          "date",
+          "beat",
+          "is_author",
+          "is_root",
+          "runs",
+          "is_viewer"
+        ],
+        "title": "GroupRow",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -328,6 +627,69 @@
           "coordinates"
         ],
         "title": "LineGeometry",
+        "type": "object"
+      },
+      "MatchInfo": {
+        "description": "Совпадение с маршрутом — автору трека (плашка в превью и на просмотре).",
+        "properties": {
+          "beat": {
+            "title": "Beat",
+            "type": "boolean"
+          },
+          "by_author": {
+            "title": "By Author",
+            "type": "boolean"
+          },
+          "diff_s": {
+            "title": "Diff S",
+            "type": "number"
+          },
+          "equal": {
+            "title": "Equal",
+            "type": "boolean"
+          },
+          "hidden_time_s": {
+            "title": "Hidden Time S",
+            "type": "number"
+          },
+          "result_time_s": {
+            "title": "Result Time S",
+            "type": "number"
+          },
+          "root": {
+            "$ref": "#/components/schemas/RootRef"
+          },
+          "segment_distance_m": {
+            "title": "Segment Distance M",
+            "type": "number"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "active",
+              "detached"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "trimmed": {
+            "title": "Trimmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "root",
+          "state",
+          "result_time_s",
+          "diff_s",
+          "beat",
+          "equal",
+          "by_author",
+          "trimmed",
+          "segment_distance_m",
+          "hidden_time_s"
+        ],
+        "title": "MatchInfo",
         "type": "object"
       },
       "OwnProfile": {
@@ -627,6 +989,36 @@
         "title": "PublicProfile",
         "type": "object"
       },
+      "RootRef": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "author"
+        ],
+        "title": "RootRef",
+        "type": "object"
+      },
       "SearchItem": {
         "properties": {
           "attempts_count": {
@@ -841,6 +1233,16 @@
       },
       "TrackDetail": {
         "properties": {
+          "attempt_of": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RootRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "author": {
             "$ref": "#/components/schemas/Author"
           },
@@ -914,6 +1316,10 @@
               }
             ]
           },
+          "group_runners": {
+            "title": "Group Runners",
+            "type": "integer"
+          },
           "has_elevation": {
             "anyOf": [
               {
@@ -940,6 +1346,16 @@
             },
             "title": "Km Marks",
             "type": "array"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "moving_time_s": {
             "anyOf": [
@@ -1075,7 +1491,10 @@
           "photos",
           "is_owner",
           "owner",
-          "km_marks"
+          "km_marks",
+          "match",
+          "attempt_of",
+          "group_runners"
         ],
         "title": "TrackDetail",
         "type": "object"
@@ -1231,6 +1650,11 @@
               }
             ],
             "title": "Description"
+          },
+          "detach": {
+            "default": false,
+            "title": "Detach",
+            "type": "boolean"
           },
           "publish": {
             "default": false,
@@ -2251,6 +2675,70 @@
         ]
       }
     },
+    "/tracks/{track_id}/check": {
+      "post": {
+        "operationId": "check_run_tracks__track_id__check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "track_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Track Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Нет маршрута или трека"
+          },
+          "409": {
+            "description": "Не готов"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Run",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
     "/tracks/{track_id}/gpx": {
       "get": {
         "operationId": "download_gpx_tracks__track_id__gpx_get",
@@ -2295,6 +2783,57 @@
         "summary": "Download Gpx",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/tracks/{track_id}/group": {
+      "get": {
+        "operationId": "read_group_tracks__track_id__group_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "track_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Track Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Трек не найден"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Group",
+        "tags": [
+          "groups"
         ]
       }
     },

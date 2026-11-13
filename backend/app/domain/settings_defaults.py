@@ -42,4 +42,6 @@ DEFAULT_SETTINGS: Final[dict[str, Any]] = {
     "map.cluster_max_zoom": 11,
     "map.max_lines": 300,
     "search.new_days": 7,  # «новые» — опубликованные за столько дней
+    # add-route-matching: доля точек маршрута, пройденных «по ходу»
+    "matching.direction_min_share": 0.9,
 }

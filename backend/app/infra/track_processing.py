@@ -12,6 +12,7 @@ from app.domain.tracks.model import FileFormat, TrackRejectedError
 from app.domain.tracks.pipeline import ProcessedTrack, Visibility, process
 from app.infra import wkt
 from app.infra.db import get_engine
+from app.infra.matching_service import save_pending
 from app.infra.models import Track, TrackSplit, TrackStatus, User
 from app.infra.models import Visibility as Vis
 from app.infra.s3 import s3_client
@@ -120,6 +121,12 @@ def process_track(cfg: Config, track_id: uuid.UUID) -> None:
             return
         _apply(db, track, result)
         track.status = TrackStatus.draft.value
+        db.flush()
+        # Совпадение с маршрутом — для плашки в превью; в группу трек попадёт при публикации.
+        try:
+            save_pending(db, track)
+        except Exception:
+            log.exception("matching failed for track %s", track_id)
         db.commit()
 
 

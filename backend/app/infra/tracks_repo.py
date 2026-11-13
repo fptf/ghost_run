@@ -17,13 +17,13 @@ def public_filter(stmt: Select[Any]) -> Select[Any]:
 
 
 def user_tracks(db: Session, user_id: uuid.UUID, public_only: bool) -> list[Track]:
-    stmt = select(Track).where(Track.user_id == user_id)
+    stmt = select(Track).where(Track.user_id == user_id, Track.deleted_at.is_(None))
     stmt = public_filter(stmt) if public_only else stmt
     return list(db.execute(stmt.order_by(Track.created_at.desc())).scalars())
 
 
 def stats(db: Session, user_id: uuid.UUID, public_only: bool) -> dict[str, Any]:
-    base = select(Track).where(Track.user_id == user_id)
+    base = select(Track).where(Track.user_id == user_id, Track.deleted_at.is_(None))
     base = public_filter(base) if public_only else base.where(Track.status.in_(PROCESSED))
     sub = base.subquery()
     runs, total = db.execute(
@@ -75,8 +75,12 @@ def find_duplicate(db: Session, user_id: uuid.UUID, sha256: str) -> Track | None
 
 
 def can_view(track: Track, viewer_id: uuid.UUID | None) -> bool:
+    if track.deleted_at is not None:
+        return False  # удалён автором; группа видна через попытки
     if viewer_id == track.user_id:
         return True
+    if track.hidden_by_moderator:
+        return False
     return track.status == TrackStatus.published.value and track.visibility in (
         Visibility.public.value,
         Visibility.link.value,

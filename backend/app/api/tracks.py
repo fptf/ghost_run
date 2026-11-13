@@ -11,6 +11,15 @@ from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
 from app.domain.tracks.model import REJECT_MESSAGES, RejectReason
 from app.domain.tracks.parsers import detect_format
 from app.infra import tracks_repo
+from app.infra.matching_service import (
+    attempt_row,
+    detach,
+    group_rows,
+    has_group,
+    root_of,
+    soft_delete_root,
+    sync_group,
+)
 from app.infra.models import Track, TrackPhoto, TrackStatus, User, Visibility
 from app.infra.photos import BadPhotoError, sanitize
 from app.infra.queue import TaskQueue, get_queue
@@ -83,6 +92,27 @@ class OwnerExtras(BaseModel):
     fully_hidden: bool
 
 
+class RootRef(BaseModel):
+    id: uuid.UUID
+    title: str | None
+    author: Author
+
+
+class MatchInfo(BaseModel):
+    """Совпадение с маршрутом — автору трека (плашка в превью и на просмотре)."""
+
+    root: RootRef
+    state: Literal["pending", "active", "detached"]
+    result_time_s: float
+    diff_s: float
+    beat: bool
+    equal: bool
+    by_author: bool
+    trimmed: bool
+    segment_distance_m: float
+    hidden_time_s: float
+
+
 class KmMark(BaseModel):
     km: int
     lon: float
@@ -101,6 +131,9 @@ class TrackDetail(TrackSummary):
     is_owner: bool
     owner: OwnerExtras | None
     km_marks: list[KmMark]
+    match: MatchInfo | None  # только автору
+    attempt_of: RootRef | None  # трек — попытка в группе этого маршрута
+    group_runners: int  # бегунов в группе маршрута этого трека (с автором)
 
 
 class TrackUpdate(BaseModel):
@@ -108,6 +141,7 @@ class TrackUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     visibility: VisibilityLiteral | None = None
     publish: bool = False
+    detach: bool = False  # «Не засчитывать» — трек не попадает в группы
 
 
 class UploadError(BaseModel):
@@ -176,6 +210,43 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
         is_owner=is_owner,
         owner=owner,
         km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
+        match=_match_info(db, track) if is_owner else None,
+        attempt_of=_root_ref(db, track.parent_track_id) if track.parent_track_id else None,
+        group_runners=len(group_rows(db, root_of(db, track))) if track.status == "published" else 0,
+    )
+
+
+def _root_ref(db: DbDep, root_id: uuid.UUID) -> RootRef | None:
+    root = db.get(Track, root_id)
+    author = db.get(User, root.user_id) if root else None
+    if root is None or author is None:
+        return None
+    return RootRef(
+        id=root.id,
+        title=root.title,
+        author=Author(id=author.id, name=author.name, avatar_url=author.avatar_url),
+    )
+
+
+def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
+    attempt = attempt_row(db, track.id)
+    if attempt is None:
+        return None
+    ref = _root_ref(db, attempt.root_track_id)
+    if ref is None:
+        return None
+    tie = float(get_setting(db, "comparison.tie_threshold_s"))
+    return MatchInfo(
+        root=ref,
+        state=attempt.state,  # type: ignore[arg-type]
+        result_time_s=attempt.result_time_s,
+        diff_s=attempt.diff_s,
+        beat=attempt.beat,
+        equal=abs(attempt.diff_s) < tie,
+        by_author=attempt.by_author,
+        trimmed=attempt.trimmed,
+        segment_distance_m=attempt.segment_distance_m,
+        hidden_time_s=attempt.hidden_time_s,
     )
 
 
@@ -298,6 +369,11 @@ def update_track(
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Укажите название трека")
         track.status = TrackStatus.published.value
         track.published_at = track.published_at or datetime.now(UTC)
+    if body.detach:
+        detach(db, track)
+    db.flush()
+    if track.status == TrackStatus.published.value:
+        sync_group(db, track)  # привязка к маршруту или выход из группы по видимости
     db.commit()
     db.refresh(track)
     return _detail(db, track, user)
@@ -316,6 +392,11 @@ def _delete_prefix(cfg: ConfigDep, prefix: str) -> None:
 @router.delete("/tracks/{track_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigDep) -> None:
     track = _own_track(db, track_id, user)
+    if has_group(db, track.id):
+        # ФТ-9: исходный трек с попытками только прячется — группа и таблица остаются
+        soft_delete_root(track)
+        db.commit()
+        return
     _delete_prefix(cfg, track_prefix(track.user_id, track.id))
     db.delete(track)
     db.commit()

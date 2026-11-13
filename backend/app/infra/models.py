@@ -121,6 +121,10 @@ class Track(Base):
     parent_track_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("tracks.id", ondelete="SET NULL")
     )
+    match_excluded: Mapped[bool] = mapped_column(Boolean, default=False)  # «Не засчитывать»
+    root_closed: Mapped[bool] = mapped_column(Boolean, default=False)  # не принимает попыток
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    hidden_by_moderator: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -152,4 +156,35 @@ class TrackDownload(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AttemptState(enum.StrEnum):
+    pending = "pending"  # найдено после обработки, ждёт публикации
+    active = "active"  # в группе
+    detached = "detached"  # отвязана или вышла из группы
+
+
+class Attempt(Base):
+    __tablename__ = "attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tracks.id", ondelete="CASCADE"), unique=True
+    )
+    root_track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    state: Mapped[str] = mapped_column(String(16), default=AttemptState.pending.value)
+    segment_time_s: Mapped[float] = mapped_column(Float)
+    hidden_time_s: Mapped[float] = mapped_column(Float)
+    result_time_s: Mapped[float] = mapped_column(Float)
+    diff_s: Mapped[float] = mapped_column(Float)
+    beat: Mapped[bool] = mapped_column(Boolean, default=False)
+    by_author: Mapped[bool] = mapped_column(Boolean, default=False)
+    coverage: Mapped[float] = mapped_column(Float)
+    start_gap_m: Mapped[float] = mapped_column(Float)
+    finish_gap_m: Mapped[float] = mapped_column(Float)
+    direction_share: Mapped[float] = mapped_column(Float)
+    length_ratio: Mapped[float] = mapped_column(Float)
+    segment_distance_m: Mapped[float] = mapped_column(Float)
+    trimmed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

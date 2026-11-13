@@ -9,6 +9,7 @@ from app.api.deps import ConfigDep, CurrentUser, DbDep
 from app.domain.privacy import RadiusBounds, RadiusOutOfRangeError, validate_hide_radius
 from app.infra import tracks_repo
 from app.infra.account_cleanup import run_cleanups
+from app.infra.matching_service import before_account_deletion
 from app.infra.models import User
 from app.infra.queue import TaskQueue, get_queue
 from app.infra.settings_repo import get_setting
@@ -123,6 +124,7 @@ def update_me(
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 def delete_me(response: Response, user: CurrentUser, db: DbDep, cfg: ConfigDep) -> None:
+    before_account_deletion(db, user.id)  # группы переживают удаление автора
     run_cleanups(cfg, user.id)
     db.delete(user)  # refresh-токены удаляются каскадом
     db.commit()
