@@ -37,6 +37,22 @@ open http://localhost:5173   # фронт; /api/* проксируется на 
 На Apple Silicon образ PostGIS работает через эмуляцию amd64 (для первого `pytest` его
 нужно скачать заранее: `docker pull --platform linux/amd64 postgis/postgis:16-3.5`).
 
+## Вход
+
+Вход только через Google. Пока `GOOGLE_CLIENT_ID` не задан, в разработке работает dev-вход
+(`AUTH_DEV_LOGIN=true`, по умолчанию в docker compose): на странице «Вход» — форма email + имя.
+Роль назначается так: `docker compose exec api python -m app.scripts.set_role <email> moderator`.
+
+Подключить Google:
+1. https://console.cloud.google.com → создать проект.
+2. «APIs & Services» → «OAuth consent screen»: тип External, название приложения, email поддержки.
+3. «Credentials» → «Create credentials» → «OAuth client ID» → тип «Web application».
+   В «Authorized JavaScript origins» добавить `http://localhost:5173` (и боевой домен).
+   Redirect URI не нужен — используется Google Identity Services.
+4. Скопировать Client ID (вида `….apps.googleusercontent.com`) в `.env`: `GOOGLE_CLIENT_ID=…`,
+   затем `docker compose up -d`. Client secret не нужен.
+5. В проде: `AUTH_DEV_LOGIN=false`, `COOKIE_SECURE=true`, свой длинный `JWT_SECRET`.
+
 ## Разработка
 
 ```bash

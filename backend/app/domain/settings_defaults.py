@@ -28,4 +28,6 @@ DEFAULT_SETTINGS: Final[dict[str, Any]] = {
     "upload.rate_limit_per_hour": 20,
     # ФТ-4
     "privacy.hide_radius_m": {"min": 200, "max": 500},
+    # add-auth-profile: лимит запросов к /auth/* на IP в минуту
+    "auth.rate_limit_per_minute": 10,
 }

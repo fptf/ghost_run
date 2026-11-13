@@ -1,9 +1,11 @@
 """Общие фикстуры: настоящие PostGIS, Redis и S3 (SeaweedFS) в testcontainers."""
 
+import uuid
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+import redis
 from alembic.config import Config as AlembicConfig
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,6 +24,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 POSTGIS_IMAGE = "postgis/postgis:16-3.5"
 SEAWEEDFS_IMAGE = "chrislusf/seaweedfs:4.53"
 S3_CONFIG = BACKEND_DIR.parent / "infra" / "seaweedfs" / "s3.json"
+GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com"
 
 
 @pytest.fixture(scope="session")
@@ -60,6 +63,8 @@ def config(postgres: PostgresContainer, redis_url: str, s3_endpoint: str) -> Con
         s3_access_key="runners",
         s3_secret_key="runners-secret",
         s3_bucket="tracks",
+        auth_dev_login=True,
+        google_client_id=GOOGLE_CLIENT_ID,
     )
     ensure_bucket(cfg)
     return cfg
@@ -83,7 +88,16 @@ def db(migrated: Config) -> Iterator[Session]:
 
 @pytest.fixture
 def client(migrated: Config) -> Iterator[TestClient]:
+    redis.Redis.from_url(migrated.redis_url).flushdb()  # сбрасываем счётчики лимитов
     app.dependency_overrides[get_config] = lambda: migrated
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+def dev_login(client: TestClient, email: str | None = None, name: str = "Бегун") -> dict[str, str]:
+    """Входит через dev-вход и возвращает заголовок авторизации."""
+    email = email or f"{uuid.uuid4().hex[:10]}@example.com"
+    resp = client.post("/auth/dev-login", json={"email": email, "name": name})
+    assert resp.status_code == 200, resp.text
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}

@@ -22,6 +22,7 @@ EXPECTED_FROM_TZ = {
     "upload.min_pace_s_per_km": 150,  # ФТ-7: 2:30 мин/км
     "upload.rate_limit_per_hour": 20,  # раздел 8
     "privacy.hide_radius_m": {"min": 200, "max": 500},  # ФТ-4
+    "auth.rate_limit_per_minute": 10,  # design add-auth-profile
 }
 
 

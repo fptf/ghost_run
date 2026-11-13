@@ -12,6 +12,11 @@ dependencies = [
     "redis>=5.2",
     "celery[redis]>=5.4",
     "boto3>=1.35",
+    "pyjwt>=2.15.1",
+    "google-auth>=2.62.2",
+    "requests>=2.34.2",
+    "geoalchemy2>=0.21.0",
+    "pydantic[email]>=2.14.3",
 ]
 
 [dependency-groups]
@@ -25,6 +30,7 @@ dev = [
     "mypy>=1.13",
     "types-pyyaml>=6.0",
     "celery-types>=0.22",
+    "types-requests>=2.33.0.20261030",
 ]
 
 [tool.uv]
