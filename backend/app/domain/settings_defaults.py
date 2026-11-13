@@ -41,4 +41,5 @@ DEFAULT_SETTINGS: Final[dict[str, Any]] = {
     # add-map-search: кластеры до этого зума включительно, предел линий на экране
     "map.cluster_max_zoom": 11,
     "map.max_lines": 300,
+    "search.new_days": 7,  # «новые» — опубликованные за столько дней
 }

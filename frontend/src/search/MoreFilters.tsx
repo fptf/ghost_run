@@ -93,14 +93,6 @@ export function MoreFilters({
           />
         </label>
       </div>
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={filters.att === true}
-          onChange={(e) => onChange({ att: e.target.checked ? true : null })}
-        />
-        {t("search.hasAttempts")}
-      </label>
     </div>
   );
 }

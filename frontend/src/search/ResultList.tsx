@@ -25,7 +25,10 @@ export function ResultList({
             aria-current={it.id === selectedId}
             onClick={() => onSelect(it.id)}
           >
-            <strong className="result__title">{it.title ?? t("track.untitled")}</strong>
+            <strong className="result__title">
+              {it.title ?? t("track.untitled")}
+              {it.is_new && <span className="badge badge--new">{t("search.newBadge")}</span>}
+            </strong>
             <span className="result__meta">
               {formatKm(it.distance_m)} км · {formatDuration(it.total_time_s)} ·{" "}
               {formatPace(it.avg_pace_s_per_km)} /км

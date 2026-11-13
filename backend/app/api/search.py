@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Literal
 from urllib.parse import quote
 from xml.sax.saxutils import escape, quoteattr
@@ -30,6 +30,7 @@ class SearchItem(BaseModel):
     author: Author
     runners_count: int
     attempts_count: int
+    is_new: bool
     start: list[float]
 
 
@@ -69,6 +70,7 @@ def search_tracks(
     date_from: date | None = None,
     date_to: date | None = None,
     has_attempts: bool | None = None,
+    is_new: bool | None = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
     sort: search_repo.Sort = "popular",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -78,6 +80,7 @@ def search_tracks(
     if bbox is None and text is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Нужна область карты или текст")
     box = tuple(float(v) for v in bbox.split(",")) if bbox else None
+    new_since = datetime.now(UTC) - timedelta(days=int(get_setting(db, "search.new_days")))
     query = search_repo.SearchQuery(
         bbox=box,  # type: ignore[arg-type]
         zoom=zoom,
@@ -91,6 +94,7 @@ def search_tracks(
         date_from=date_from,
         date_to=date_to,
         has_attempts=has_attempts,
+        new_since=new_since if is_new else None,
         q=text,
         sort=sort,
         limit=limit,
@@ -111,6 +115,7 @@ def search_tracks(
             ),
             runners_count=r["runners_count"],
             attempts_count=r["attempts_count"],
+            is_new=bool(r["track"].published_at and r["track"].published_at >= new_since),
             start=r["start"],
         )
         for r in rows

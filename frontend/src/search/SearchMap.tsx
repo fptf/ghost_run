@@ -31,6 +31,8 @@ export interface SearchMapProps {
   selectedLine: number[][] | null;
   /** Счётчик: при изменении карта подгоняется под выбранный трек. */
   fitKey: number;
+  /** Перелёт к области (сброс, «треки рядом»); key меняется при каждом запросе. */
+  flyTo: (View & { key: number }) | null;
   onViewChange: (v: Viewport) => void;
   onSelect: (id: string | null) => void;
 }
@@ -53,6 +55,7 @@ export function SearchMap({
   selectedId,
   selectedLine,
   fitKey,
+  flyTo,
   onViewChange,
   onSelect,
 }: SearchMapProps) {
@@ -135,8 +138,12 @@ export function SearchMap({
       emit();
     });
     map.on("moveend", emit);
+    // Карта следит только за окном; панель рядом может скрываться — следим за контейнером.
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(el);
 
     return () => {
+      resize.disconnect();
       ready.current = false;
       map.remove();
       mapRef.current = null;
@@ -200,6 +207,12 @@ export function SearchMap({
     const box = boundsOf(selectedLine);
     if (box) map.fitBounds(box, { padding: 48, maxZoom: 16, duration: 0 });
   }, [fitKey, selectedLine]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !flyTo) return;
+    map.jumpTo({ center: [flyTo.lon, flyTo.lat], zoom: flyTo.z });
+  }, [flyTo]);
 
   return <div ref={container} className="search-map" role="region" aria-label={t("map.label")} />;
 }

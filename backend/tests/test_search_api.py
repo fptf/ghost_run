@@ -179,6 +179,23 @@ def test_has_attempts_filter(client: TestClient, db: Session) -> None:
     assert ids(search(client, bbox=bbox(center), zoom=14, has_attempts=False)) == {lonely["id"]}
 
 
+def test_new_tracks(client: TestClient, db: Session) -> None:
+    me, center = dev_login(client), area()
+    fresh = run_at(client, me, center)
+    old = run_at(client, me, offset(*center, 800, 0))
+    db.execute(
+        update(Track)
+        .where(Track.id == uuid.UUID(old["id"]))
+        .values(published_at=func.now() - func.make_interval(0, 0, 0, 8))  # 8 дней назад
+    )
+    db.commit()
+    result = search(client, bbox=bbox(center), zoom=14, is_new=True)
+    assert ids(result) == {fresh["id"]}
+    assert result["items"][0]["is_new"] is True
+    everything = {i["id"]: i["is_new"] for i in search(client, bbox=bbox(center), zoom=14)["items"]}
+    assert everything == {fresh["id"]: True, old["id"]: False}
+
+
 # --- Sorting ----------------------------------------------------------------------------
 
 

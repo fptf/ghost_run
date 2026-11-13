@@ -40,6 +40,7 @@ function item(id: string, title: string, runners = 1) {
     author: AUTHOR,
     runners_count: runners,
     attempts_count: runners - 1,
+    is_new: runners === 1,
     start: [131.9, 43.1],
   };
 }
@@ -100,6 +101,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   tokenStore.set(null);
   mapProps.last = null;
+  window.localStorage.clear();
 });
 
 function searchCalls(fetchMock: ReturnType<typeof mockApi>["fetchMock"]): URL[] {
@@ -219,5 +221,98 @@ describe("Карточка трека", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Показать на карте" }));
     expect(await screen.findByRole("heading", { name: "Карта маршрутов" })).toBeInTheDocument();
+  });
+});
+
+describe("Управление главной", () => {
+  it("«Новые» — быстрый переключатель, уходит в запрос, новые помечены", async () => {
+    const { fetchMock } = mockApi({
+      "POST /auth/refresh": NO_SESSION,
+      "GET /tracks/search": () => searchResponse(),
+    });
+    renderApp("/");
+    await screen.findByText("Круг по парку");
+    expect(screen.getByText("новый")).toBeInTheDocument(); // Круг по парку — новый
+    fireEvent.click(screen.getByRole("button", { name: "Новые" }));
+    await waitFor(() =>
+      expect(searchCalls(fetchMock).at(-1)?.searchParams.get("is_new")).toBe("true"),
+    );
+    expect(screen.getByRole("button", { name: "Новые" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("«Сбросить» очищает фильтры, поиск и возвращает карту в исходную область", async () => {
+    window.localStorage.setItem("runners.nearbyAnswer", "declined");
+    const { fetchMock } = mockApi({
+      "POST /auth/refresh": NO_SESSION,
+      "GET /tracks/search": () => searchResponse(),
+    });
+    renderApp("/?lat=43.3&lon=132.1&z=10&cat=10&fresh=1&att=1&pmin=270&sort=pace");
+    await screen.findByText("Набережная до маяка");
+    fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
+    await waitFor(() => {
+      const last = searchCalls(fetchMock).at(-1) as URL;
+      expect(last.searchParams.has("category")).toBe(false);
+      expect(last.searchParams.has("is_new")).toBe(false);
+      expect(last.searchParams.has("pace_min_s")).toBe(false);
+      expect(last.searchParams.get("sort")).toBe("popular");
+    });
+    expect(mapProps.last?.flyTo).toMatchObject({ lat: 43.1155, lon: 131.8855, z: 12 });
+    expect(screen.getByRole("button", { name: "10 км" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("список скрывается и показывается явной кнопкой", async () => {
+    mockApi({ "POST /auth/refresh": NO_SESSION, "GET /tracks/search": () => searchResponse() });
+    renderApp("/");
+    await screen.findByText("Набережная до маяка");
+    const toggle = screen.getByRole("button", { name: /Показать список/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: /Скрыть список/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("при первом заходе спрашивает про треки рядом; согласие переводит карту к бегуну", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: {
+        getCurrentPosition: (ok: PositionCallback) =>
+          ok({ coords: { latitude: 43.02, longitude: 131.89 } } as GeolocationPosition),
+      },
+    });
+    mockApi({ "POST /auth/refresh": NO_SESSION, "GET /tracks/search": () => searchResponse() });
+    renderApp("/");
+    expect(
+      await screen.findByRole("dialog", { name: "Показать треки рядом с вами?" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Показать" }));
+    await waitFor(() =>
+      expect(mapProps.last?.flyTo).toMatchObject({ lat: 43.02, lon: 131.89, z: 13 }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("runners.nearbyAnswer")).toBe("accepted");
+    expect(JSON.parse(window.localStorage.getItem("runners.homeView") ?? "{}")).toMatchObject({
+      lat: 43.02,
+    });
+  });
+
+  it("отказ запоминается: вопрос больше не показывается, карта во Владивостоке", async () => {
+    mockApi({ "POST /auth/refresh": NO_SESSION, "GET /tracks/search": () => searchResponse() });
+    const first = renderApp("/");
+    fireEvent.click(await screen.findByRole("button", { name: "Не сейчас" }));
+    expect(window.localStorage.getItem("runners.nearbyAnswer")).toBe("declined");
+    first.unmount();
+    renderApp("/");
+    await screen.findByText("Набережная до маяка");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mapProps.last?.initialView).toEqual({ lat: 43.1155, lon: 131.8855, z: 12 });
+  });
+
+  it("по ссылке с областью карты вопрос не задаётся", async () => {
+    mockApi({ "POST /auth/refresh": NO_SESSION, "GET /tracks/search": () => searchResponse() });
+    renderApp("/?lat=43.2&lon=131.95&z=14");
+    await screen.findByText("Набережная до маяка");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

@@ -142,7 +142,13 @@ export function TrackMap({ line, fullLine, zone, kmMarks, label }: TrackMapProps
         .addTo(map);
     }
 
-    return () => map.remove();
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(el);
+
+    return () => {
+      resize.disconnect();
+      map.remove();
+    };
   }, [line, fullLine, zone, kmMarks]);
 
   return <div ref={container} className="track-map" role="img" aria-label={label} />;

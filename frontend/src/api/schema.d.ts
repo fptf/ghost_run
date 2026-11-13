@@ -523,6 +523,8 @@ export interface components {
        * Format: uuid
        */
       id: string;
+      /** Is New */
+      is_new: boolean;
       /** Runners Count */
       runners_count: number;
       /** Start */
@@ -1090,6 +1092,7 @@ export interface operations {
         date_from?: string | null;
         date_to?: string | null;
         has_attempts?: boolean | null;
+        is_new?: boolean | null;
         q?: string | null;
         sort?: "popular" | "distance" | "pace" | "date" | "attempts";
         limit?: number;

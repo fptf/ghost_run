@@ -28,6 +28,7 @@ class SearchQuery:
     date_from: date | None = None
     date_to: date | None = None
     has_attempts: bool | None = None
+    new_since: datetime | None = None  # «новые»: опубликованные не раньше
     q: str | None = None
     sort: Sort = "popular"
     limit: int = 20
@@ -96,6 +97,8 @@ def _conditions(q: SearchQuery) -> list[ColumnElement[bool]]:
     if q.date_to is not None:
         end = datetime.combine(q.date_to + timedelta(days=1), time.min, UTC)
         cond.append(Track.started_at < end)
+    if q.new_since is not None:
+        cond.append(Track.published_at >= q.new_since)
     if q.has_attempts is True:
         cond.append(ATTEMPTS > 0)
     elif q.has_attempts is False:

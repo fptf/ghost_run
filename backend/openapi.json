@@ -674,6 +674,10 @@
             "title": "Id",
             "type": "string"
           },
+          "is_new": {
+            "title": "Is New",
+            "type": "boolean"
+          },
           "runners_count": {
             "title": "Runners Count",
             "type": "integer"
@@ -731,6 +735,7 @@
           "author",
           "runners_count",
           "attempts_count",
+          "is_new",
           "start"
         ],
         "title": "SearchItem",
@@ -1997,6 +2002,22 @@
                 }
               ],
               "title": "Has Attempts"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_new",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is New"
             }
           },
           {

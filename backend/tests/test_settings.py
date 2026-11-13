@@ -32,6 +32,7 @@ EXPECTED_FROM_TZ = {
     "upload.max_photo_bytes": 10 * 1024 * 1024,
     "map.cluster_max_zoom": 11,  # design add-map-search
     "map.max_lines": 300,
+    "search.new_days": 7,
 }
 
 

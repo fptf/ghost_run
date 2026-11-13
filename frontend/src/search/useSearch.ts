@@ -29,6 +29,7 @@ export function useTrackSearch(filters: Filters, viewport: Viewport | null, limi
             date_from: filters.from ?? undefined,
             date_to: filters.to ?? undefined,
             has_attempts: filters.att ?? undefined,
+            is_new: filters.fresh ?? undefined,
             q: q || undefined,
             sort: filters.sort,
             limit,
