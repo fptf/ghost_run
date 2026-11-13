@@ -9,6 +9,7 @@
 - [ ] 2.4 Категория по границам из `settings`
 - [ ] 2.5 Проверки ФТ-7: нет времени, темп быстрее 2:30
 - [ ] 2.6 Скрытая зона: границы видимой части (начало и конец), видимая геометрия
+- [ ] 2.7 Рабочие геометрии: пересэмплинг с равным шагом (сопоставление), Дуглас—Пекер (карта)
 
 ## 3. Storage & processing
 - [ ] 3.1 Миграция: tracks (LINESTRINGZM, visible LINESTRINGM, границы, статусы, видимость), track_splits, track_photos, новые ключи `settings`
@@ -29,7 +30,7 @@
 
 ## 5. Tests
 - [ ] 5.1 Supported Files: Valid GPX, Same run in three formats, File too large, Unsupported format, Processing time
-- [ ] 5.2 Track Metrics: Category assigned, Stops excluded, Kilometre splits, GPS spike ignored
+- [ ] 5.2 Track Metrics: Category assigned, Stops excluded, Kilometre splits, GPS spike ignored, Working geometries
 - [ ] 5.3 Implausible: No timestamps, Too fast; Duplicate: Same file again
 - [ ] 5.4 Privacy zones: Start inside zone, Owner preview, No home set, Zone changed later, Track entirely inside zone
 - [ ] 5.5 Visibility: Publish public, Private, Link-only; Edit, Delete, Foreign track
