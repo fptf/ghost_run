@@ -17,7 +17,8 @@
     "uploadShort": "Загрузить",
     "uploadTail": "трек",
     "map": "Карта",
-    "main": "Основная навигация"
+    "main": "Основная навигация",
+    "ratings": "Рейтинги"
   },
   "health": {
     "label": "Состояние сервера",
@@ -296,5 +297,21 @@
     "wholeGroup": "Вся группа маршрута",
     "shareWin": "Пробежал «{{route}}» на {{diff}} быстрее автора!",
     "shareRun": "Пробежал «{{route}}» за {{time}}"
+  },
+  "ratings": {
+    "title": "Рейтинги маршрутов",
+    "subtitle": "Самые популярные маршруты за всё время",
+    "categories": "Категории дистанции",
+    "empty": "В этой категории пока нет маршрутов.",
+    "runners_one": "{{count}} бегун",
+    "runners_few": "{{count}} бегуна",
+    "runners_many": "{{count}} бегунов",
+    "runners_other": "{{count}} бегуна",
+    "downloads_one": "{{count}} скачивание",
+    "downloads_few": "{{count}} скачивания",
+    "downloads_many": "{{count}} скачиваний",
+    "downloads_other": "{{count}} скачивания",
+    "formula": "Популярность = 5 × бегуны группы + 2 × скачивания GPX. Пересчитывается раз в час.",
+    "scoreTitle": "Популярность"
   }
 }

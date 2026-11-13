@@ -22,6 +22,9 @@ export function Header() {
         <NavLink to="/" end className="header__link">
           {t("nav.map")}
         </NavLink>
+        <NavLink to="/ratings" className="header__link">
+          {t("nav.ratings")}
+        </NavLink>
       </nav>
       <nav className="header__nav">
         <button

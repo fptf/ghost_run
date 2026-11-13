@@ -142,6 +142,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/ratings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read Rating */
+    get: operations["read_rating_ratings_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/tracks": {
     parameters: {
       query?: never;
@@ -707,6 +724,36 @@ export interface components {
       /** Name */
       name: string;
       stats: components["schemas"]["ProfileStats"];
+    };
+    /** RatingItem */
+    RatingItem: {
+      author: components["schemas"]["Author"];
+      /** Avg Pace S Per Km */
+      avg_pace_s_per_km: number | null;
+      /**
+       * Computed At
+       * Format: date-time
+       */
+      computed_at: string;
+      /** Distance M */
+      distance_m: number | null;
+      /** Downloads */
+      downloads: number;
+      /** Place */
+      place: number;
+      /** Runners */
+      runners: number;
+      /** Title */
+      title: string | null;
+      /** Total Time S */
+      total_time_s: number | null;
+      /**
+       * Track Id
+       * Format: uuid
+       */
+      track_id: string;
+      /** Value */
+      value: number;
     };
     /** ResultAchievement */
     ResultAchievement: {
@@ -1314,6 +1361,38 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TrackSummary"][];
+        };
+      };
+    };
+  };
+  read_rating_ratings_get: {
+    parameters: {
+      query: {
+        category: "1" | "5" | "10" | "21" | "21+";
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RatingItem"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

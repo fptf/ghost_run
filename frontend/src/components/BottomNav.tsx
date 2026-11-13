@@ -19,7 +19,7 @@ function Icon({ d }: { d: string }) {
   );
 }
 
-/** Нижняя панель на телефоне (по макету Main). «Рейтинги» появятся в add-ratings. */
+/** Нижняя панель на телефоне (по макету Main): Карта, Рейтинги, Профиль. */
 export function BottomNav() {
   const { t } = useTranslation();
   const { status } = useAuth();
@@ -30,6 +30,10 @@ export function BottomNav() {
       <NavLink to="/" end className="bottom-nav__item">
         <Icon d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14" />
         {t("nav.map")}
+      </NavLink>
+      <NavLink to="/ratings" className="bottom-nav__item">
+        <Icon d="M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0V4Zm10 2h3a3 3 0 0 1-3 4M7 6H4a3 3 0 0 0 3 4" />
+        {t("nav.ratings")}
       </NavLink>
       <NavLink to={status === "authenticated" ? "/me" : "/login"} className="bottom-nav__item">
         <span className="nav-icon">
