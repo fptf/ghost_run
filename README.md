@@ -84,7 +84,16 @@ npm run lint && npm run format:check && npm run typecheck && npm run test
 python3 -I tools/anonymize_gpx.py <папка с GPX> backend/tests/fixtures/tracks   # сдвиг координат, срез концов
 cd backend && uv run python ../tools/convert_track.py tests/fixtures/tracks/run_20261026.gpx  # .tcx и .fit
 ```
-Исходные треки с реальными координатами (`./tracks/`) в git не попадают.
+Исходные треки с реальными координатами (`./tracks/`, разложены по сериям маршрутов — см.
+`tracks/README.md`) в git не попадают.
+
+Тестовый дамп для локального стека — изменённые копии реальных треков от вымышленных бегунов
+(темп ±7%, дата за последние 45 дней, смещение до ~7 м); у бегунов задана скрытая зона у дома:
+```bash
+python3 -I tools/make_dump.py tracks tracks-dump                       # серии сохраняются
+cd backend && uv run python ../tools/load_dump.py ../tracks-dump        # повтор безопасен
+cd backend && uv run python ../tools/load_dump.py ../tracks-dump --reset  # после перегенерации
+```
 
 Настройки (пороги сопоставления, категории, популярность, лимиты) лежат в таблице `settings`
 и читаются без перезапуска.
