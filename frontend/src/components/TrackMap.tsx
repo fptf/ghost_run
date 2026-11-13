@@ -3,11 +3,10 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
 // Vite обрабатывает воркер как воркер (без клиента HMR) и в dev, и в сборке.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
+import { MAP_STYLE } from "../lib/mapStyle";
 import type { LngLatBoundsLike } from "maplibre-gl";
 import { useEffect, useRef } from "react";
-
-/** Векторные тайлы OpenFreeMap: бесплатно, без ключа. Смена провайдера — только этот URL. */
-export const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 setWorkerUrl(workerUrl);
 
@@ -85,7 +84,7 @@ export function TrackMap({ line, fullLine, zone, label }: TrackMapProps) {
     map.on("idle", () => (el.dataset.ready = "true"));
     map.on("error", (e) => console.error("map error:", e.error?.message ?? e));
 
-    // style.load наступает сразу после разбора стиля — линия видна, пока догружаются тайлы.
+    // Стиль встроен, style.load наступает сразу — линия видна, пока догружаются тайлы.
     map.once("style.load", () => {
       el.dataset.style = "true";
       map.addSource("zone", {
