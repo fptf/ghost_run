@@ -142,9 +142,9 @@ def check_run(
         select(
             func.ST_AsGeoJSON(
                 func.ST_Simplify(
-                    func.ST_Buffer(Track.route_geometry.cast(_geog()), cfg.corridor_width_m).cast(
-                        _geom()
-                    ),
+                    func.ST_Buffer(
+                        func.ST_Force2D(Track.route_geometry).cast(_geog()), cfg.corridor_width_m
+                    ).cast(_geom()),
                     0.00003,
                 ),
                 6,

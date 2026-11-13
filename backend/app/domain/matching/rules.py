@@ -36,6 +36,7 @@ class Route:
     points: list[LonLat]  # видимая часть, шаг ~10 м
     full_distance_m: float  # полная дистанция автора (со скрытыми частями)
     visible_from_m: float  # где начинается видимая часть на полном треке
+    visible_to_m: float  # где она заканчивается
     total_time_s: float  # результат автора — общее время
 
 
@@ -172,7 +173,7 @@ def match(route: Route, attempt: AttemptLine, cfg: MatchConfig) -> MatchResult:
     att = np.asarray(a_xy)
     r_start, r_finish = r_xy[0], r_xy[-1]
     r_cum = cumulative(r_xy)
-    visible_len = r_cum[-1]
+    visible_len = route.visible_to_m - route.visible_from_m
     is_loop = dist(r_start, r_finish) < cfg.loop_threshold_m
 
     ordered = True
@@ -213,7 +214,13 @@ def match(route: Route, attempt: AttemptLine, cfg: MatchConfig) -> MatchResult:
 
     direction_share = _direction_share(r_xy, seg_xy, cfg.corridor_width_m)
 
-    length_ratio = seg_len / visible_len if visible_len > 0 else math.inf
+    # Длины сравниваются по линиям с одинаковым шагом 10 м: дрожание GPS удлиняет сырой трек
+    # по-разному на разных пробежках, а правило — про совпадение маршрута, а не шума.
+    seg_smooth = _resample(seg_xy, 10.0)
+    seg_smooth_len = (
+        float(np.sum(np.hypot(*np.diff(seg_smooth, axis=0).T))) if len(seg_smooth) > 1 else 0.0
+    )
+    length_ratio = seg_smooth_len / r_cum[-1] if r_cum[-1] > 0 else math.inf
     hidden_len = max(0.0, route.full_distance_m - visible_len)
     pace = seg_time / seg_len if seg_len > 0 else 0.0
     hidden_time = hidden_len * pace

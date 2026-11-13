@@ -44,6 +44,7 @@ def route_of(db: Session, root: Track) -> Route | None:
         points=[(float(c[0]), float(c[1])) for c in coords],
         full_distance_m=root.distance_m,
         visible_from_m=root.visible_from_m or 0.0,
+        visible_to_m=root.visible_to_m if root.visible_to_m is not None else root.distance_m,
         total_time_s=root.total_time_s,
     )
 

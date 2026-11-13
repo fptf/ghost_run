@@ -61,7 +61,8 @@ def upgrade() -> None:
     op.create_index("ix_attempts_root", "attempts", ["root_track_id", "state"])
     op.execute(
         sa.text(
-            "INSERT INTO settings (key, value) VALUES ('matching.direction_min_share', '0.9'::jsonb)"
+            "INSERT INTO settings (key, value) "
+            "VALUES ('matching.direction_min_share', '0.9'::jsonb)"
         )
     )
 
