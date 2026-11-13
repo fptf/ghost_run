@@ -22,6 +22,15 @@
 (линейный, круговой, с разминкой, со срезкой, два круга, обратное направление)
 в `backend/tests/fixtures/tracks/`.
 
+## Отложено до запуска
+Не блокирует разработку, но обязательно до выхода в прод.
+
+- [ ] **Google OAuth.** Получить Client ID в Google Cloud Console (инструкция — в разделе
+      [«Вход»](#вход)) и прописать `GOOGLE_CLIENT_ID`. Пока ключа нет, работает dev-вход.
+      Вход через Google покрыт тестами с поддельным Google, но вживую не проверялся.
+- [ ] **Боевые настройки входа:** `AUTH_DEV_LOGIN=false`, `COOKIE_SECURE=true`, свой длинный `JWT_SECRET`,
+      доверие к `X-Forwarded-For` за прокси (иначе лимит `/auth/*` общий на всех).
+
 ## Запуск
 
 Нужны Docker с compose v2. Одна команда поднимает всё: api, worker, PostGIS, Redis, S3 (SeaweedFS), frontend.
