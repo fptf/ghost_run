@@ -1,0 +1,87 @@
+name: runners
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-runners}:${POSTGRES_PASSWORD:-runners}@postgres:5432/${POSTGRES_DB:-runners}
+  REDIS_URL: redis://redis:6379/0
+  S3_ENDPOINT_URL: http://s3:8333
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-runners}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-runners-secret}
+  S3_BUCKET: ${S3_BUCKET:-tracks}
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    platform: linux/amd64 # официальный образ PostGIS собирается только под amd64
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-runners}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-runners}
+      POSTGRES_DB: ${POSTGRES_DB:-runners}
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      # -h 127.0.0.1: во время initdb временный сервер слушает только сокет, проверка по TCP не даёт ложного «готов»
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # S3-совместимое хранилище для разработки (SeaweedFS; публичные образы MinIO больше не выпускаются).
+  s3:
+    image: chrislusf/seaweedfs:4.53
+    command: server -ip.bind=0.0.0.0 -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    ports: ["${S3_PORT:-8333}:8333"]
+    volumes:
+      - s3data:/data
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8333/healthz"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: ./backend
+    environment: *backend-env
+    ports: ["${API_PORT:-8000}:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      s3: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    build: ./backend
+    command: celery -A app.infra.celery_app:celery_app worker --loglevel=info
+    environment: *backend-env
+    depends_on:
+      api: { condition: service_healthy } # api применяет миграции
+
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://api:8000
+    ports: ["${FRONTEND_PORT:-5173}:5173"]
+    volumes: [./frontend/src:/app/src]
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  s3data:

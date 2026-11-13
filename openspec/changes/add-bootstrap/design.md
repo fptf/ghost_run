@@ -15,9 +15,10 @@
 - API-клиент: FastAPI экспортирует `backend/openapi.json` скриптом, фронт генерирует
   типы через `openapi-typescript` и использует `openapi-fetch`. CI перегенерирует оба
   артефакта и падает на `git diff`.
-- Тесты с PostGIS используют testcontainers (`postgis/postgis:16-3.4`) и локально, и в CI —
+- Тесты с PostGIS используют testcontainers (`postgis/postgis:16-3.5`, только amd64 — на Apple Silicon через эмуляцию) и локально, и в CI —
   отдельный сервис в GitHub Actions не нужен.
-- Бакет MinIO создаётся одноразовым контейнером `minio-init` в compose.
+- Локальное S3 — SeaweedFS (`chrislusf/seaweedfs`): публичные образы MinIO больше не выпускаются.
+  Бакет создаётся идемпотентно скриптом `app.scripts.init_storage` при старте api.
 - Форматирование и линт: ruff + black, mypy strict для `app/domain`; eslint + prettier, tsc strict.
 - Внешнего репозитория пока нет: CI-workflow пишется и проверяется локально;
   прогон на настоящем PR — после подключения GitHub.

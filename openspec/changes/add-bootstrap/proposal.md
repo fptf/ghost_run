@@ -4,7 +4,7 @@
 
 ## What Changes
 - Монорепозиторий: `backend/` (FastAPI), `frontend/` (React + Vite), `docs/`, `openspec/`.
-- Docker Compose: api, worker (Celery), postgres+postgis, redis, minio, frontend.
+- Docker Compose: api, worker (Celery), postgres+postgis, redis, s3 (SeaweedFS), frontend.
 - Alembic с первой миграцией (расширение PostGIS, таблица настроек `settings` с сидом
   порогов из разделов 5.1–5.3, ФТ-5, ФТ-7, ФТ-28 и раздела 8).
 - Health-check API (200/503), пустая страница фронта, сгенерированный API-клиент.

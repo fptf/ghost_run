@@ -14,7 +14,7 @@
 - Geo: PostgreSQL 16 + PostGIS 3, shapely, pyproj (метрические расчёты в локальной UTM-проекции)
 - Разбор файлов: gpxpy (GPX), fitparse (FIT), lxml (TCX)
 - Очередь: Redis + Celery (разбор файлов и сопоставление — только в воркере)
-- Файлы: S3-совместимое хранилище (локально MinIO)
+- Файлы: S3-совместимое хранилище (локально SeaweedFS)
 - Frontend: React 18 + TypeScript + Vite, MapLibre GL JS, TanStack Query
 - Инфраструктура: Docker Compose для разработки, GitHub Actions CI
 - Тесты: pytest (+ testcontainers для PostGIS), Vitest, Playwright для e2e

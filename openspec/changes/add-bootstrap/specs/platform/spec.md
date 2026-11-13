@@ -4,7 +4,7 @@
 
 #### Scenario: Cold start
 - **WHEN** разработчик выполняет `docker compose up` в чистом клоне
-- **THEN** поднимаются api, worker, postgres+postgis, redis, minio и frontend
+- **THEN** поднимаются api, worker, postgres+postgis, redis, s3 (SeaweedFS) и frontend
 - **AND** `GET /health` возвращает 200 с телом `{"status": "ok", "checks": {"db": "ok", "redis": "ok", "s3": "ok"}}`
 
 #### Scenario: Dependency down
