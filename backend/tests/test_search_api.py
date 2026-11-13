@@ -10,6 +10,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.infra.models import Track, TrackDownload
+from app.infra.ratings_service import recalc
 from tests.conftest import dev_login
 from tests.gpx_factory import GEOD, offset, straight, to_gpx
 from tests.test_track_domain import haversine
@@ -208,13 +209,14 @@ def test_sort_by_pace(client: TestClient) -> None:
     assert paces == sorted(paces) and len(paces) == 3
 
 
-def test_sort_by_distance_and_popularity(client: TestClient) -> None:
+def test_sort_by_distance_and_popularity(client: TestClient, db: Session) -> None:
     me, center = dev_login(client), area()
     short = run_at(client, me, center, distance=2000)
     long = run_at(client, me, offset(*center, 300, 0), distance=6000)
     assert [i["id"] for i in search(client, bbox=bbox(center), zoom=14, sort="distance")[
         "items"]] == [short["id"], long["id"]]  # fmt: skip
     client.get(f"/tracks/{long['id']}/gpx")  # скачивание поднимает популярность
+    recalc(db)  # популярность — из почасового пересчёта (add-ratings)
     popular = search(client, bbox=bbox(center), zoom=14, sort="popular")["items"]
     assert popular[0]["id"] == long["id"]
 

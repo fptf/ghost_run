@@ -71,7 +71,8 @@ services:
 
   worker:
     build: ./backend
-    command: celery -A app.infra.celery_app:celery_app worker --loglevel=info
+    # -B: встроенный планировщик (пересчёт популярности раз в час); для прототипа одного хватает
+    command: celery -A app.infra.celery_app:celery_app worker -B --loglevel=info --schedule=/tmp/celerybeat-schedule
     environment: *backend-env
     depends_on:
       api: { condition: service_healthy } # api применяет миграции

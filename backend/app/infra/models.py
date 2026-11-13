@@ -213,3 +213,18 @@ class UserAchievement(Base):
     achievement_id: Mapped[int] = mapped_column(ForeignKey("achievements.id", ondelete="CASCADE"))
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     awarded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PopularityScore(Base):
+    __tablename__ = "popularity_scores"
+
+    track_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tracks.id", ondelete="CASCADE"), primary_key=True
+    )
+    period: Mapped[str] = mapped_column(String(16), primary_key=True, default="all")
+    category: Mapped[str] = mapped_column(String(8))
+    runners: Mapped[int] = mapped_column(Integer)
+    downloads: Mapped[int] = mapped_column(Integer)
+    likes: Mapped[int] = mapped_column(Integer)
+    value: Mapped[float] = mapped_column(Float)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

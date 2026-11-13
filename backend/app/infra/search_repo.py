@@ -9,7 +9,14 @@ from typing import Any, Literal
 from sqlalchemy import ColumnElement, Select, and_, func, literal, or_, select
 from sqlalchemy.orm import Session, aliased
 
-from app.infra.models import Track, TrackDownload, TrackStatus, User, Visibility
+from app.infra.models import (
+    PopularityScore,
+    Track,
+    TrackDownload,
+    TrackStatus,
+    User,
+    Visibility,
+)
 
 Sort = Literal["popular", "distance", "pace", "date", "attempts"]
 
@@ -56,8 +63,14 @@ DOWNLOADS = (
     .correlate(Track)
     .scalar_subquery()
 )
-# Живая формула ФТ-28 без лайков; add-ratings заменит её на пересчитываемый PopularityScore.
-POPULARITY = 5 * RUNNERS + 2 * DOWNLOADS
+# Популярность — из почасового пересчёта (add-ratings); трек без строки ещё не пересчитан — 0.
+POPULARITY = func.coalesce(
+    select(PopularityScore.value)
+    .where(PopularityScore.track_id == Track.id, PopularityScore.period == "all")
+    .correlate(Track)
+    .scalar_subquery(),
+    0,
+)
 
 
 def _conditions(q: SearchQuery) -> list[ColumnElement[bool]]:
