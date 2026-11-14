@@ -1,7 +1,7 @@
 """Схемы ответа, общие для нескольких роутеров."""
 
 import uuid
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel
 
@@ -11,6 +11,18 @@ from app.infra.models import Achievement, Track, User
 class LineGeometry(BaseModel):
     type: Literal["LineString"]
     coordinates: list[list[float]]
+
+
+def line_geometry(geojson: dict[str, Any] | None) -> LineGeometry | None:
+    return LineGeometry.model_validate(geojson) if geojson else None
+
+
+def as_literal[L: str](value: str, allowed: tuple[L, ...]) -> L:
+    """Строка из БД как значение Literal-типа схемы ответа (allowed — get_args этого типа)."""
+    for option in allowed:
+        if option == value:
+            return option
+    raise ValueError(f"unexpected value {value!r}")
 
 
 class Author(BaseModel):

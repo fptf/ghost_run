@@ -112,13 +112,13 @@ def test_elevation_gain() -> None:
 
 def test_working_geometries() -> None:
     result = run(to_gpx(straight(3000, bearing_deg=45)))
-    route = result.visibility.route
+    route = result.visible_part.route
     proj = Projection.for_point(route[0][1], route[0][0])
     xy = proj.to_xy([p[1] for p in route], [p[0] for p in route])
     steps = [math.dist(a, b) for a, b in zip(xy, xy[1:], strict=False)]
     assert all(s == pytest.approx(10, abs=0.05) for s in steps[:-1])
-    assert len(result.visibility.display) < len(result.visibility.visible) / 10
-    assert result.visibility.display[0] == pytest.approx(route[0][:2], abs=1e-6)
+    assert len(result.visible_part.display) < len(result.visible_part.visible) / 10
+    assert result.visible_part.display[0] == pytest.approx(route[0][:2], abs=1e-6)
 
 
 # --- Implausible Tracks Rejected --------------------------------------------------
@@ -148,7 +148,7 @@ def test_start_inside_zone() -> None:
     pts = straight(3000, bearing_deg=0)
     home = offset(*ORIGIN, 0, 150)  # дом в 150 м от старта по ходу трека
     result = run(to_gpx(pts), home=home, radius=300)
-    vis = result.visibility
+    vis = result.visible_part
     assert vis.range is not None and vis.range.from_m == pytest.approx(450, abs=2)
     for geometry in (vis.visible, vis.route, vis.display):
         assert min(haversine(home, (p[1], p[0])) for p in geometry) >= 300
@@ -157,26 +157,26 @@ def test_start_inside_zone() -> None:
 def test_finish_inside_zone() -> None:
     pts = straight(3000, bearing_deg=0)
     home = offset(*ORIGIN, 0, 2900)
-    vis = run(to_gpx(pts), home=home, radius=300).visibility
+    vis = run(to_gpx(pts), home=home, radius=300).visible_part
     assert vis.range is not None and vis.range.to_m == pytest.approx(2600, abs=2)
 
 
 def test_middle_pass_stays_visible() -> None:
     home = offset(*ORIGIN, 100, 1500)  # трек проходит в 100 м от дома посередине
-    vis = run(to_gpx(straight(3000)), home=home, radius=300).visibility
+    vis = run(to_gpx(straight(3000)), home=home, radius=300).visible_part
     assert vis.range is not None
     assert (vis.range.from_m, vis.range.to_m) == pytest.approx((0, 3000), abs=1)
 
 
 def test_no_home_set() -> None:
     result = run(to_gpx(straight(2000)))
-    assert result.visibility.range is not None
-    assert result.visibility.range.from_m == 0
-    assert result.visibility.range.to_m == pytest.approx(result.metrics.distance_m)
+    assert result.visible_part.range is not None
+    assert result.visible_part.range.from_m == 0
+    assert result.visible_part.range.to_m == pytest.approx(result.metrics.distance_m)
 
 
 def test_track_entirely_inside_zone() -> None:
-    vis = run(to_gpx(circle(ORIGIN, 150, laps=2)), home=ORIGIN, radius=300).visibility
+    vis = run(to_gpx(circle(ORIGIN, 150, laps=2)), home=ORIGIN, radius=300).visible_part
     assert vis.range is None and vis.display == [] and vis.route == []
 
 

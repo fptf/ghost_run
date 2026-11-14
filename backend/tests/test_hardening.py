@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import REFRESH_COOKIE
 from app.config import Config
-from app.domain.tracks.privacy import JITTER_SHARE, visible_range
+from app.domain.tracks.visible_range import JITTER_SHARE, visible_range
 from app.infra.models import Track, TrackStatus
 from app.infra.track_processing import GIVE_UP_AFTER, STUCK_AFTER, requeue_stuck
 from tests.helpers import dev_login, unique_run, upload

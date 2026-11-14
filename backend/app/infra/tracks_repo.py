@@ -1,9 +1,10 @@
 import json
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import ColumnElement, Select, and_, func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import InstrumentedAttribute, Session, aliased
 
 from app.infra.models import (
     Attempt,
@@ -88,7 +89,14 @@ def user_tracks(db: Session, user_id: uuid.UUID, public_only: bool) -> list[Trac
     return list(db.execute(stmt.order_by(Track.created_at.desc())).scalars())
 
 
-def stats(db: Session, user_id: uuid.UUID, public_only: bool) -> dict[str, Any]:
+@dataclass(frozen=True)
+class RunnerStats:
+    runs: int
+    total_distance_m: int
+    records: dict[str, int]  # категория -> лучшее время, с
+
+
+def stats(db: Session, user_id: uuid.UUID, public_only: bool) -> RunnerStats:
     base = select(Track).where(Track.user_id == user_id, Track.deleted_at.is_(None))
     base = public_filter(base) if public_only else base.where(Track.status.in_(PROCESSED))
     sub = base.subquery()
@@ -102,11 +110,11 @@ def stats(db: Session, user_id: uuid.UUID, public_only: bool) -> dict[str, Any]:
             .group_by(sub.c.category)
         ).all()
     )
-    return {
-        "runs": int(runs),
-        "total_distance_m": int(round(float(total))),
-        "records": {k: int(round(v)) for k, v in records.items()},
-    }
+    return RunnerStats(
+        runs=int(runs),
+        total_distance_m=int(round(float(total))),
+        records={k: int(round(v)) for k, v in records.items()},
+    )
 
 
 def with_author(db: Session, track_id: uuid.UUID) -> tuple[Track, User] | None:
@@ -124,9 +132,12 @@ def author(db: Session, track: Track) -> User:
     return user
 
 
-def geojson(db: Session, track_id: uuid.UUID, column: str) -> dict[str, Any] | None:
+def geojson(
+    db: Session, track_id: uuid.UUID, column: InstrumentedAttribute[Any]
+) -> dict[str, Any] | None:
+    """Геометрия трека из колонки column (например, Track.display_geometry) в GeoJSON."""
     raw = db.execute(
-        select(func.ST_AsGeoJSON(getattr(Track, column), 7)).where(Track.id == track_id)
+        select(func.ST_AsGeoJSON(column, 7)).where(Track.id == track_id)
     ).scalar_one_or_none()
     return json.loads(raw) if raw else None
 

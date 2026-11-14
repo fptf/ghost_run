@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -334,21 +334,36 @@ def root_of(db: Session, track: Track) -> Track:
     return parent or track
 
 
-def group_rows(db: Session, root: Track) -> list[dict[str, Any]]:
+@dataclass(frozen=True)
+class GroupEntry:
+    """Результат бегуна в группе маршрута."""
+
+    user: User
+    track_id: uuid.UUID
+    time_s: float
+    date: datetime | None
+    beat: bool
+    is_author: bool
+    is_root: bool
+    place: int = 0
+    runs: int = 0  # попыток этого бегуна в группе
+
+
+def group_rows(db: Session, root: Track) -> list[GroupEntry]:
     """Лучший результат каждого бегуна (включая автора): место, время, число попыток."""
     author = db.get(User, root.user_id)
-    entries: list[dict[str, Any]] = []
+    entries: list[GroupEntry] = []
     if author is not None and root.total_time_s is not None:
         entries.append(
-            {
-                "user": author,
-                "track_id": root.id,
-                "time_s": root.total_time_s,
-                "date": root.started_at,
-                "beat": False,
-                "is_author": True,
-                "is_root": True,
-            }
+            GroupEntry(
+                user=author,
+                track_id=root.id,
+                time_s=root.total_time_s,
+                date=root.started_at,
+                beat=False,
+                is_author=True,
+                is_root=True,
+            )
         )
     attempts = db.execute(
         select(Attempt, Track, User)
@@ -362,28 +377,28 @@ def group_rows(db: Session, root: Track) -> list[dict[str, Any]]:
     ).all()
     for attempt, track, user in attempts:
         entries.append(
-            {
-                "user": user,
-                "track_id": track.id,
-                "time_s": attempt.result_time_s,
-                "date": track.started_at,
-                "beat": attempt.beat,
-                "is_author": attempt.by_author,
-                "is_root": False,
-            }
+            GroupEntry(
+                user=user,
+                track_id=track.id,
+                time_s=attempt.result_time_s,
+                date=track.started_at,
+                beat=attempt.beat,
+                is_author=attempt.by_author,
+                is_root=False,
+            )
         )
-    best: dict[uuid.UUID, dict[str, Any]] = {}
+    best: dict[uuid.UUID, GroupEntry] = {}
     counts: dict[uuid.UUID, int] = {}
     for e in entries:
-        uid = e["user"].id
+        uid = e.user.id
         counts[uid] = counts.get(uid, 0) + 1
-        if uid not in best or e["time_s"] < best[uid]["time_s"]:
+        if uid not in best or e.time_s < best[uid].time_s:
             best[uid] = e
-    rows = sorted(best.values(), key=lambda e: e["time_s"])
-    for place, row in enumerate(rows, start=1):
-        row["place"] = place
-        row["runs"] = counts[row["user"].id]
-    return rows
+    rows = sorted(best.values(), key=lambda e: e.time_s)
+    return [
+        replace(row, place=place, runs=counts[row.user.id])
+        for place, row in enumerate(rows, start=1)
+    ]
 
 
 def soft_delete_root(track: Track) -> None:

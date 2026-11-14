@@ -1,6 +1,7 @@
 """Показатели трека (ФТ-6) и проверки правдоподобия (ФТ-7)."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from app.domain.tracks.geo import Projection, cumulative, dist
 from app.domain.tracks.model import Point, RejectReason, TrackRejectedError
@@ -55,20 +56,23 @@ def category_for(distance_m: float, bounds_m: tuple[int, ...]) -> str:
     return CATEGORY_CODES[len(bounds_m)]
 
 
+def _time(p: Point) -> datetime:
+    assert p.time is not None  # clean() отклоняет треки без времени
+    return p.time
+
+
 def clean(points: list[Point], cfg: MetricsConfig) -> CleanTrack:
     """Сортирует по времени, убирает дубликаты времени и точки-выбросы."""
     if any(p.time is None for p in points) or not points:
         raise TrackRejectedError(RejectReason.no_time)
-    ordered = sorted(points, key=lambda p: p.time)  # type: ignore[arg-type, return-value]
+    ordered = sorted(points, key=_time)
     proj = Projection.for_point(ordered[0].lat, ordered[0].lon)
     xy_all = proj.to_xy([p.lat for p in ordered], [p.lon for p in ordered])
 
     kept: list[int] = [0]
     for i in range(1, len(ordered)):
         prev = kept[-1]
-        t0, t1 = ordered[prev].time, ordered[i].time
-        assert t0 is not None and t1 is not None
-        dt = (t1 - t0).total_seconds()
+        dt = (_time(ordered[i]) - _time(ordered[prev])).total_seconds()
         if dt <= 0:
             continue
         if dist(xy_all[prev], xy_all[i]) / dt > cfg.max_point_speed_mps:
@@ -79,9 +83,8 @@ def clean(points: list[Point], cfg: MetricsConfig) -> CleanTrack:
         raise TrackRejectedError(RejectReason.too_short)
     pts = [ordered[i] for i in kept]
     xy = [xy_all[i] for i in kept]
-    start = pts[0].time
-    assert start is not None
-    t_s = [(p.time - start).total_seconds() for p in pts]  # type: ignore[operator]
+    start = _time(pts[0])
+    t_s = [(_time(p) - start).total_seconds() for p in pts]
     return CleanTrack(points=pts, xy=xy, cum_m=cumulative(xy), t_s=t_s, projection=proj)
 
 

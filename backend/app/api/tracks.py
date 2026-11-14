@@ -1,7 +1,7 @@
 import hashlib
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -9,7 +9,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
-from app.api.schemas import AchievementFields, Author, LineGeometry, RootRef, author_of, root_ref
+from app.api.schemas import (
+    AchievementFields,
+    Author,
+    LineGeometry,
+    RootRef,
+    as_literal,
+    author_of,
+    line_geometry,
+    root_ref,
+)
 from app.domain.matching import verdict
 from app.domain.tracks.model import REJECT_MESSAGES, RejectReason
 from app.domain.tracks.parsers import detect_format
@@ -39,6 +48,11 @@ router = APIRouter(tags=["tracks"])
 QueueDep = Annotated[TaskQueue, Depends(get_queue)]
 StatusLiteral = Literal["processing", "rejected", "draft", "published"]
 VisibilityLiteral = Literal["public", "link", "private"]
+AttemptStateLiteral = Literal["pending", "active", "detached"]
+# Значения Literal-типов совпадают с TrackStatus, Visibility и AttemptState (проверяет тест).
+STATUSES: tuple[StatusLiteral, ...] = get_args(StatusLiteral)
+VISIBILITIES: tuple[VisibilityLiteral, ...] = get_args(VisibilityLiteral)
+ATTEMPT_STATES: tuple[AttemptStateLiteral, ...] = get_args(AttemptStateLiteral)
 FULLY_HIDDEN_MESSAGE = (
     "Трек целиком в скрытой зоне у дома — его можно опубликовать только как приватный"
 )
@@ -92,7 +106,7 @@ class MatchInfo(BaseModel):
     """Совпадение с маршрутом — автору трека (плашка в превью и на просмотре)."""
 
     root: RootRef
-    state: Literal["pending", "active", "detached"]
+    state: AttemptStateLiteral
     result_time_s: float
     diff_s: float
     beat: bool
@@ -156,10 +170,10 @@ def _summary(track: Track) -> TrackSummary:
     reason = RejectReason(track.reject_reason) if track.reject_reason else None
     return TrackSummary(
         id=track.id,
-        status=track.status,  # type: ignore[arg-type]
+        status=as_literal(track.status, STATUSES),
         reject_reason=track.reject_reason,
         reject_message=REJECT_MESSAGES[reason] if reason else None,
-        visibility=track.visibility,  # type: ignore[arg-type]
+        visibility=as_literal(track.visibility, VISIBILITIES),
         title=track.title,
         started_at=track.started_at,
         distance_m=track.distance_m,
@@ -179,7 +193,9 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
     if is_owner:
         home = get_home(db, user)
         owner = OwnerExtras(
-            full_geometry=tracks_repo.geojson(db, track.id, "full_display_geometry"),  # type: ignore[arg-type]
+            full_geometry=line_geometry(
+                tracks_repo.geojson(db, track.id, Track.full_display_geometry)
+            ),
             hidden_zone=(
                 HiddenZone(lat=home[0], lon=home[1], radius_m=user.hide_radius_m)
                 if home and user.hide_radius_m
@@ -198,14 +214,14 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
             for s in tracks_repo.splits(db, track.id)
         ],
         author=author_of(user),
-        geometry=tracks_repo.geojson(db, track.id, "display_geometry"),  # type: ignore[arg-type]
+        geometry=line_geometry(tracks_repo.geojson(db, track.id, Track.display_geometry)),
         photos=[
             Photo(id=p.id, url=f"/tracks/{track.id}/photos/{p.id}")
             for p in tracks_repo.photos(db, track.id)
         ],
         is_owner=is_owner,
         owner=owner,
-        km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
+        km_marks=[KmMark(km=m.km, lon=m.lon, lat=m.lat) for m in km_marks(db, track)],
         match=_match_info(db, track) if is_owner else None,
         attempt_of=_root_ref(db, track.parent_track_id) if track.parent_track_id else None,
         group_runners=(
@@ -226,7 +242,7 @@ def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
         return None
     return MatchInfo(
         root=ref,
-        state=attempt.state,  # type: ignore[arg-type]
+        state=as_literal(attempt.state, ATTEMPT_STATES),
         result_time_s=attempt.result_time_s,
         diff_s=attempt.diff_s,
         beat=attempt.beat,

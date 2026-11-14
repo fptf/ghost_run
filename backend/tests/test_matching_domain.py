@@ -15,12 +15,12 @@ CFG = MatchConfig()
 
 
 def route(p: ProcessedTrack) -> Route:
-    assert p.visibility.range is not None
+    assert p.visible_part.range is not None
     return Route(
-        points=[(x, y) for x, y, _ in p.visibility.route],
+        points=[(x, y) for x, y, _ in p.visible_part.route],
         full_distance_m=p.metrics.distance_m,
-        visible_from_m=p.visibility.range.from_m,
-        visible_to_m=p.visibility.range.to_m,
+        visible_from_m=p.visible_part.range.from_m,
+        visible_to_m=p.visible_part.range.to_m,
         total_time_s=p.metrics.total_time_s,
     )
 

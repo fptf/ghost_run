@@ -116,7 +116,36 @@ def _order(q: SearchQuery) -> list[Any]:
     }[q.sort] + [Track.id]
 
 
-def list_tracks(db: Session, q: SearchQuery) -> tuple[int, list[dict[str, Any]]]:
+@dataclass(frozen=True)
+class SearchHit:
+    track: Track
+    author: User
+    attempts_count: int
+    runners_count: int
+    start: list[float]  # lon, lat старта видимой части
+
+
+@dataclass(frozen=True)
+class ClusterPoint:
+    lon: float
+    lat: float
+    count: int
+
+
+@dataclass(frozen=True)
+class RouteLine:
+    id: uuid.UUID
+    coordinates: list[list[float]]
+
+
+@dataclass(frozen=True)
+class KmPoint:
+    km: int
+    lon: float
+    lat: float
+
+
+def list_tracks(db: Session, q: SearchQuery) -> tuple[int, list[SearchHit]]:
     total = db.execute(_base(q, func.count())).scalar_one()
     rows = db.execute(
         _base(
@@ -133,13 +162,13 @@ def list_tracks(db: Session, q: SearchQuery) -> tuple[int, list[dict[str, Any]]]
         .offset(q.offset)
     ).all()
     items = [
-        {
-            "track": r.Track,
-            "author": r.User,
-            "attempts_count": int(r.attempts),
-            "runners_count": int(r.runners),
-            "start": [float(r.lon), float(r.lat)],
-        }
+        SearchHit(
+            track=r.Track,
+            author=r.User,
+            attempts_count=int(r.attempts),
+            runners_count=int(r.runners),
+            start=[float(r.lon), float(r.lat)],
+        )
         for r in rows
     ]
     return int(total), items
@@ -150,24 +179,24 @@ def cluster_cell_deg(zoom: float) -> float:
     return 360.0 / (2 ** max(zoom, 0)) / 3
 
 
-def clusters(db: Session, q: SearchQuery) -> list[dict[str, float]]:
+def clusters(db: Session, q: SearchQuery) -> list[ClusterPoint]:
     cell = cluster_cell_deg(q.zoom)
     grid = func.ST_SnapToGrid(Track.start_point, cell)
     center = func.ST_Centroid(func.ST_Collect(Track.start_point))
     rows = db.execute(
         _base(q, func.ST_X(center), func.ST_Y(center), func.count()).group_by(grid)
     ).all()
-    return [{"lon": float(x), "lat": float(y), "count": int(n)} for x, y, n in rows]
+    return [ClusterPoint(lon=float(x), lat=float(y), count=int(n)) for x, y, n in rows]
 
 
-def lines(db: Session, q: SearchQuery, max_lines: int) -> list[dict[str, Any]]:
+def lines(db: Session, q: SearchQuery, max_lines: int) -> list[RouteLine]:
     tolerance = 360.0 / (256 * 2 ** max(q.zoom, 0))  # ~1 пиксель
     geom = func.ST_AsGeoJSON(func.ST_Simplify(Track.display_geometry, literal(tolerance)), 6)
     rows = db.execute(_base(q, Track.id, geom).order_by(*_order(q)).limit(max_lines)).all()
-    return [{"id": tid, "coordinates": json.loads(g)["coordinates"]} for tid, g in rows if g]
+    return [RouteLine(id=tid, coordinates=json.loads(g)["coordinates"]) for tid, g in rows if g]
 
 
-def km_marks(db: Session, track: Track) -> list[dict[str, float]]:
+def km_marks(db: Session, track: Track) -> list[KmPoint]:
     """Отметки целых километров на видимой части (дистанция — по всему треку)."""
     if track.visible_geometry is None or track.visible_from_m is None or not track.distance_m:
         return []
@@ -183,7 +212,7 @@ def km_marks(db: Session, track: Track) -> list[dict[str, float]]:
         columns += [func.ST_X(point), func.ST_Y(point)]
     row = db.execute(select(*columns).where(Track.id == track.id)).one()  # все отметки сразу
     return [
-        {"km": k, "lon": float(row[2 * i]), "lat": float(row[2 * i + 1])} for i, k in enumerate(kms)
+        KmPoint(km=k, lon=float(row[2 * i]), lat=float(row[2 * i + 1])) for i, k in enumerate(kms)
     ]
 
 

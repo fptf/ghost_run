@@ -117,18 +117,18 @@ def search_tracks(
     total, rows = search_repo.list_tracks(db, query)
     items = [
         SearchItem(
-            id=r["track"].id,
-            title=r["track"].title,
-            distance_m=r["track"].distance_m,
-            total_time_s=r["track"].total_time_s,
-            avg_pace_s_per_km=r["track"].avg_pace_s_per_km,
-            category=r["track"].category,
-            started_at=r["track"].started_at,
-            author=author_of(r["author"]),
-            runners_count=r["runners_count"],
-            attempts_count=r["attempts_count"],
-            is_new=bool(r["track"].published_at and r["track"].published_at >= new_since),
-            start=r["start"],
+            id=r.track.id,
+            title=r.track.title,
+            distance_m=r.track.distance_m,
+            total_time_s=r.track.total_time_s,
+            avg_pace_s_per_km=r.track.avg_pace_s_per_km,
+            category=r.track.category,
+            started_at=r.track.started_at,
+            author=author_of(r.author),
+            runners_count=r.runners_count,
+            attempts_count=r.attempts_count,
+            is_new=bool(r.track.published_at and r.track.published_at >= new_since),
+            start=r.start,
         )
         for r in rows
     ]
@@ -137,7 +137,10 @@ def search_tracks(
             total=total,
             items=items,
             mode="clusters",
-            clusters=[Cluster.model_validate(c) for c in search_repo.clusters(db, query)],
+            clusters=[
+                Cluster(lon=c.lon, lat=c.lat, count=c.count)
+                for c in search_repo.clusters(db, query)
+            ],
             lines=[],
         )
     max_lines = int(get_setting(db, "map.max_lines"))
@@ -146,7 +149,10 @@ def search_tracks(
         items=items,
         mode="lines",
         clusters=[],
-        lines=[Line(**ln) for ln in search_repo.lines(db, query, max_lines)],
+        lines=[
+            Line(id=ln.id, coordinates=ln.coordinates)
+            for ln in search_repo.lines(db, query, max_lines)
+        ],
     )
 
 
