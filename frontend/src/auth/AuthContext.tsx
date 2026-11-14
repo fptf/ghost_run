@@ -24,9 +24,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback((accessToken: string) => tokenStore.set(accessToken), []);
 
+  // Весь кэш принадлежит вышедшему пользователю: следующий не должен увидеть его данные.
   const forget = useCallback(() => {
     tokenStore.set(null);
-    queryClient.removeQueries({ queryKey: ["me"] });
+    queryClient.clear();
   }, [queryClient]);
 
   const signOut = useCallback(async () => {
