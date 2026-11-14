@@ -1,55 +1,25 @@
 """Пересчёт популярности маршрутов (раз в час) и чтение рейтинга."""
 
 from datetime import UTC, datetime
-from typing import Any
 
-from sqlalchemy import and_, delete, func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy import ColumnElement, and_, delete, func, select
+from sqlalchemy.orm import Session
 
 from app.domain.ratings import Weights, popularity
-from app.infra.models import (
-    Attempt,
-    AttemptState,
-    PopularityScore,
-    Track,
-    TrackDownload,
-    TrackStatus,
-    User,
-    Visibility,
-)
+from app.infra.models import PopularityScore, Track, TrackDownload, User
 from app.infra.settings_repo import get_setting
+from app.infra.tracks_repo import group_runners, public_root
 
 PERIOD_ALL = "all"
 
 
-def _listed_roots() -> Any:
-    return and_(
-        Track.status == TrackStatus.published.value,
-        Track.visibility == Visibility.public.value,
-        Track.parent_track_id.is_(None),
-        Track.deleted_at.is_(None),
-        Track.hidden_by_moderator.is_(False),
-        Track.category.is_not(None),
-    )
+def _listed_roots() -> ColumnElement[bool]:
+    return and_(public_root(), Track.category.is_not(None))
 
 
 def recalc(db: Session) -> int:
     """Пересчитывает популярность всех публичных исходных треков. Возвращает их число."""
     weights = Weights.from_setting(get_setting(db, "popularity.weights"))
-    attempt_track = aliased(Track)
-    runners_sq = (
-        select(func.count(func.distinct(attempt_track.user_id)))
-        .select_from(Attempt)
-        .join(attempt_track, attempt_track.id == Attempt.track_id)
-        .where(
-            Attempt.root_track_id == Track.id,
-            Attempt.state == AttemptState.active.value,
-            attempt_track.user_id != Track.user_id,
-            attempt_track.hidden_by_moderator.is_(False),
-        )
-        .correlate(Track)
-        .scalar_subquery()
-    )
     downloads_sq = (
         select(func.count())
         .where(TrackDownload.track_id == Track.id)
@@ -57,12 +27,12 @@ def recalc(db: Session) -> int:
         .scalar_subquery()
     )
     rows = db.execute(
-        select(Track.id, Track.category, runners_sq, downloads_sq).where(_listed_roots())
+        select(Track.id, Track.category, group_runners(), downloads_sq).where(_listed_roots())
     ).all()
     now = datetime.now(UTC)
     ids = []
-    for track_id, category, other_runners, downloads in rows:
-        runners = int(other_runners) + 1  # автор маршрута — тоже бегун группы
+    for track_id, category, runners_raw, downloads in rows:
+        runners = int(runners_raw)
         likes = 0  # лайков в MVP нет (ФТ-31 — этап 2)
         ids.append(track_id)
         db.merge(

@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
-from app.api.schemas import Author, LineGeometry, RootRef, root_ref
+from app.api.schemas import AchievementFields, Author, LineGeometry, RootRef, author_of, root_ref
+from app.domain.matching import verdict
 from app.domain.tracks.model import REJECT_MESSAGES, RejectReason
 from app.domain.tracks.parsers import detect_format
 from app.infra import tracks_repo
@@ -17,11 +18,11 @@ from app.infra.achievements_service import new_attempts, track_achievements
 from app.infra.matching_service import (
     attempt_row,
     detach,
-    group_rows,
     has_group,
     root_of,
     soft_delete_root,
     sync_group,
+    tie_threshold_s,
 )
 from app.infra.models import Track, TrackPhoto, TrackStatus, User, Visibility
 from app.infra.photos import BadPhotoError, sanitize
@@ -102,10 +103,8 @@ class MatchInfo(BaseModel):
     hidden_time_s: float
 
 
-class AchievementBadge(BaseModel):
-    code: str
-    title: str
-    icon: str
+class AchievementBadge(AchievementFields):
+    pass
 
 
 class KmMark(BaseModel):
@@ -174,17 +173,17 @@ def _summary(track: Track) -> TrackSummary:
 
 
 def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
-    author = db.get(User, track.user_id)
-    assert author is not None
+    user = db.get(User, track.user_id)
+    assert user is not None
     is_owner = viewer is not None and viewer.id == track.user_id
     owner = None
     if is_owner:
-        home = get_home(db, author)
+        home = get_home(db, user)
         owner = OwnerExtras(
             full_geometry=tracks_repo.geojson(db, track.id, "full_display_geometry"),  # type: ignore[arg-type]
             hidden_zone=(
-                HiddenZone(lat=home[0], lon=home[1], radius_m=author.hide_radius_m)
-                if home and author.hide_radius_m
+                HiddenZone(lat=home[0], lon=home[1], radius_m=user.hide_radius_m)
+                if home and user.hide_radius_m
                 else None
             ),
             fully_hidden=track.fully_hidden,
@@ -199,7 +198,7 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
             Split(idx=s.idx, distance_m=s.distance_m, time_s=s.time_s)
             for s in tracks_repo.splits(db, track.id)
         ],
-        author=Author(id=author.id, name=author.name, avatar_url=author.avatar_url),
+        author=author_of(user),
         geometry=tracks_repo.geojson(db, track.id, "display_geometry"),  # type: ignore[arg-type]
         photos=[
             Photo(id=p.id, url=f"/tracks/{track.id}/photos/{p.id}")
@@ -210,11 +209,12 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
         km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
         match=_match_info(db, track) if is_owner else None,
         attempt_of=root_ref(db, track.parent_track_id) if track.parent_track_id else None,
-        group_runners=len(group_rows(db, root_of(db, track))) if track.status == "published" else 0,
-        achievements=[
-            AchievementBadge(code=a.code, title=a.title, icon=a.icon)
-            for a in track_achievements(db, track.id)
-        ],
+        group_runners=(
+            tracks_repo.runners_count(db, root_of(db, track).id)
+            if track.status == TrackStatus.published.value
+            else 0
+        ),
+        achievements=[AchievementBadge.of(a) for a in track_achievements(db, track.id)],
     )
 
 
@@ -225,14 +225,13 @@ def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
     ref = root_ref(db, attempt.root_track_id)
     if ref is None:
         return None
-    tie = float(get_setting(db, "comparison.tie_threshold_s"))
     return MatchInfo(
         root=ref,
         state=attempt.state,  # type: ignore[arg-type]
         result_time_s=attempt.result_time_s,
         diff_s=attempt.diff_s,
         beat=attempt.beat,
-        equal=abs(attempt.diff_s) < tie,
+        equal=verdict(attempt.diff_s, tie_threshold_s(db)).equal,
         by_author=attempt.by_author,
         trimmed=attempt.trimmed,
         segment_distance_m=attempt.segment_distance_m,

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel
 
 from app.api.deps import DbDep, OptionalUser
-from app.api.schemas import Author
+from app.api.schemas import Author, author_of
 from app.infra import search_repo
 from app.infra.models import Track
 from app.infra.settings_repo import get_setting
@@ -124,9 +124,7 @@ def search_tracks(
             avg_pace_s_per_km=r["track"].avg_pace_s_per_km,
             category=r["track"].category,
             started_at=r["track"].started_at,
-            author=Author(
-                id=r["author"].id, name=r["author"].name, avatar_url=r["author"].avatar_url
-            ),
+            author=author_of(r["author"]),
             runners_count=r["runners_count"],
             attempts_count=r["attempts_count"],
             is_new=bool(r["track"].published_at and r["track"].published_at >= new_since),

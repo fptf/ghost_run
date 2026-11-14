@@ -2,18 +2,83 @@ import json
 import uuid
 from typing import Any
 
-from sqlalchemy import Select, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import ColumnElement, Select, and_, func, select
+from sqlalchemy.orm import Session, aliased
 
-from app.infra.models import Track, TrackPhoto, TrackSplit, TrackStatus, Visibility
+from app.infra.models import (
+    Attempt,
+    AttemptState,
+    Track,
+    TrackPhoto,
+    TrackSplit,
+    TrackStatus,
+    Visibility,
+)
 
 PROCESSED = (TrackStatus.draft.value, TrackStatus.published.value)
 
 
-def public_filter(stmt: Select[Any]) -> Select[Any]:
-    return stmt.where(
+# ---------- Публичность ----------
+
+
+def published_public() -> ColumnElement[bool]:
+    """Трек опубликован с видимостью «публичный»."""
+    return and_(
         Track.status == TrackStatus.published.value, Track.visibility == Visibility.public.value
     )
+
+
+def listed_public() -> ColumnElement[bool]:
+    """Публичный трек виден всем: опубликован, не удалён автором, не скрыт модератором."""
+    return and_(
+        published_public(), Track.deleted_at.is_(None), Track.hidden_by_moderator.is_(False)
+    )
+
+
+def public_root() -> ColumnElement[bool]:
+    """Публичный трек, который не попытка: маршрут в поиске, рейтинге и сопоставлении."""
+    return and_(listed_public(), Track.parent_track_id.is_(None))
+
+
+def is_listed_public(track: Track) -> bool:
+    """То же, что listed_public(), для загруженного трека."""
+    return (
+        track.status == TrackStatus.published.value
+        and track.visibility == Visibility.public.value
+        and track.deleted_at is None
+        and not track.hidden_by_moderator
+    )
+
+
+def public_filter(stmt: Select[Any]) -> Select[Any]:
+    return stmt.where(published_public())
+
+
+# ---------- Группа ----------
+
+
+def group_runners() -> ColumnElement[int]:
+    """Бегунов в группе маршрута Track (коррелированный подзапрос): автор и все, у кого есть
+    засчитанная попытка, не скрытая модератором."""
+    runner = aliased(Track)
+    others = (
+        select(func.count(func.distinct(runner.user_id)))
+        .select_from(Attempt)
+        .join(runner, runner.id == Attempt.track_id)
+        .where(
+            Attempt.root_track_id == Track.id,
+            Attempt.state == AttemptState.active.value,
+            runner.user_id != Track.user_id,
+            runner.hidden_by_moderator.is_(False),
+        )
+        .correlate(Track)
+        .scalar_subquery()
+    )
+    return others + 1  # автор маршрута — тоже бегун группы
+
+
+def runners_count(db: Session, root_id: uuid.UUID) -> int:
+    return int(db.execute(select(group_runners()).where(Track.id == root_id)).scalar_one())
 
 
 def user_tracks(db: Session, user_id: uuid.UUID, public_only: bool) -> list[Track]:

@@ -10,14 +10,8 @@ from sqlalchemy import ColumnElement, Select, and_, func, literal, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.infra.geo_types import GEOGRAPHY, GEOMETRY
-from app.infra.models import (
-    PopularityScore,
-    Track,
-    TrackDownload,
-    TrackStatus,
-    User,
-    Visibility,
-)
+from app.infra.models import PopularityScore, Track, TrackDownload, User
+from app.infra.tracks_repo import group_runners, public_root
 
 Sort = Literal["popular", "distance", "pace", "date", "attempts"]
 
@@ -51,13 +45,7 @@ Child = aliased(Track)
 ATTEMPTS = (
     select(func.count()).where(Child.parent_track_id == Track.id).correlate(Track).scalar_subquery()
 )
-RUNNERS = (
-    select(func.count(func.distinct(Child.user_id)))
-    .where(Child.parent_track_id == Track.id, Child.user_id != Track.user_id)
-    .correlate(Track)
-    .scalar_subquery()
-    + 1  # автор исходного трека
-)
+RUNNERS = group_runners()
 # Популярность — из почасового пересчёта (ratings_service); трек без строки ещё не пересчитан — 0.
 POPULARITY = func.coalesce(
     select(PopularityScore.value)
@@ -69,14 +57,7 @@ POPULARITY = func.coalesce(
 
 
 def _conditions(q: SearchQuery) -> list[ColumnElement[bool]]:
-    cond: list[ColumnElement[bool]] = [
-        Track.status == TrackStatus.published.value,
-        Track.visibility == Visibility.public.value,
-        Track.parent_track_id.is_(None),
-        Track.display_geometry.is_not(None),
-        Track.deleted_at.is_(None),
-        Track.hidden_by_moderator.is_(False),
-    ]
+    cond: list[ColumnElement[bool]] = [public_root(), Track.display_geometry.is_not(None)]
     if q.q:
         pattern = f"%{_escape_like(q.q.strip())}%"
         cond.append(

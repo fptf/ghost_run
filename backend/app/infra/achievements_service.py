@@ -12,10 +12,9 @@ from app.infra.models import (
     Attempt,
     AttemptState,
     Track,
-    TrackStatus,
     UserAchievement,
-    Visibility,
 )
+from app.infra.tracks_repo import published_public
 
 OUTPERFORMED = "outperformed"
 
@@ -71,10 +70,7 @@ def user_showcase(db: Session, user_id: uuid.UUID, public_only: bool) -> list[di
         .order_by(UserAchievement.awarded_at.desc())
     )
     if public_only:
-        stmt = stmt.where(
-            Track.status == TrackStatus.published.value,
-            Track.visibility == Visibility.public.value,
-        )
+        stmt = stmt.where(published_public())
     grouped: dict[str, dict[str, Any]] = {}
     for ach, ua, track in db.execute(stmt).all():
         item = grouped.setdefault(

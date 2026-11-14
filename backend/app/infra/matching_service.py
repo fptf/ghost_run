@@ -7,13 +7,19 @@ from datetime import UTC, datetime
 from typing import Any
 
 from geoalchemy2 import Geography
-from sqlalchemy import and_, delete, func, literal, select
+from sqlalchemy import ColumnElement, and_, delete, func, literal, select
 from sqlalchemy.orm import Session
 
 from app.domain.matching import AttemptLine, MatchConfig, MatchResult, Route, compare, match
 from app.infra.achievements_service import sync_achievements
-from app.infra.models import Attempt, AttemptState, Track, TrackStatus, User, Visibility
+from app.infra.models import Attempt, AttemptState, Track, User
 from app.infra.settings_repo import get_setting
+from app.infra.tracks_repo import is_listed_public, public_root
+
+
+def tie_threshold_s(db: Session) -> float:
+    """Порог равного результата (5.2), с."""
+    return float(get_setting(db, "comparison.tie_threshold_s"))
 
 
 def load_config(db: Session) -> MatchConfig:
@@ -27,7 +33,7 @@ def load_config(db: Session) -> MatchConfig:
         length_tolerance=num("matching.length_tolerance"),
         loop_threshold_m=num("matching.loop_threshold_m"),
         direction_min_share=num("matching.direction_min_share"),
-        tie_threshold_s=num("comparison.tie_threshold_s"),
+        tie_threshold_s=tie_threshold_s(db),
     )
 
 
@@ -67,15 +73,11 @@ def attempt_of(db: Session, track: Track) -> AttemptLine | None:
 # ---------- Кандидаты и лучшее совпадение ----------
 
 
-def _root_conditions() -> list[Any]:
+def _root_conditions() -> list[ColumnElement[bool]]:
     return [
-        Track.status == TrackStatus.published.value,
-        Track.visibility == Visibility.public.value,
-        Track.parent_track_id.is_(None),
+        public_root(),
         Track.match_excluded.is_(False),
         Track.root_closed.is_(False),
-        Track.deleted_at.is_(None),
-        Track.hidden_by_moderator.is_(False),
         Track.route_geometry.is_not(None),
     ]
 
@@ -203,12 +205,7 @@ def sync_group(db: Session, track: Track) -> None:
 
     Вызывается после публикации и любых изменений видимости.
     """
-    is_public = (
-        track.status == TrackStatus.published.value
-        and track.visibility == Visibility.public.value
-        and track.deleted_at is None
-        and not track.hidden_by_moderator
-    )
+    is_public = is_listed_public(track)
     if has_group(db, track.id):
         # исходный трек с группой: непубличный перестаёт принимать попытки, группа остаётся
         track.root_closed = not is_public

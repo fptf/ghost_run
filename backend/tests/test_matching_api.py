@@ -47,7 +47,7 @@ def test_same_route_faster(client: TestClient) -> None:
     assert attempt["match"]["state"] == "active" and attempt["match"]["beat"] is True
     assert attempt["match"]["diff_s"] < -60
     g = group(client, root["id"])
-    assert g["runners"] == 2
+    assert g["runners"] == 2 and attempt["group_runners"] == 2
     assert [r["runner"]["name"] for r in g["rows"]] == ["Бегун", "Автор"]
     assert g["rows"][0]["beat"] is True and g["rows"][1]["is_author"] is True
     # на карте — только исходный трек, с числом бегунов

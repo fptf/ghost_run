@@ -7,6 +7,7 @@
 
 import math
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import shapely
@@ -76,18 +77,29 @@ class MatchResult:
     deviation: Deviation | None
 
 
+Outcome = Literal["beat", "slower", "equal"]
+
+
 @dataclass(frozen=True)
 class Comparison:
     diff_s: float  # отрицательная — быстрее автора
     equal: bool
     faster: bool
 
+    @property
+    def outcome(self) -> Outcome:
+        return "equal" if self.equal else "beat" if self.faster else "slower"
+
+
+def verdict(diff_s: float, tie_threshold_s: float) -> Comparison:
+    """5.2: разница меньше порога — равный результат; быстрее на порог и больше — «превзошёл»."""
+    equal = abs(diff_s) < tie_threshold_s
+    return Comparison(diff_s=diff_s, equal=equal, faster=not equal and diff_s < 0)
+
 
 def compare(result_time_s: float, root_time_s: float, tie_threshold_s: float) -> Comparison:
-    """5.2: разница меньше порога — равный результат; быстрее на порог и больше — «превзошёл»."""
-    diff = result_time_s - root_time_s
-    equal = abs(diff) < tie_threshold_s
-    return Comparison(diff_s=diff, equal=equal, faster=not equal and diff < 0)
+    """Сравнение результата попытки с результатом автора маршрута (5.2)."""
+    return verdict(result_time_s - root_time_s, tie_threshold_s)
 
 
 def _passages(dists: np.ndarray, radius: float) -> list[int]:

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.api.deps import DbDep
-from app.api.schemas import Author
+from app.api.schemas import Author, author_of
 from app.infra.ratings_service import rating
 
 router = APIRouter(tags=["ratings"])
@@ -40,7 +40,7 @@ def read_rating(
             distance_m=track.distance_m,
             total_time_s=track.total_time_s,
             avg_pace_s_per_km=track.avg_pace_s_per_km,
-            author=Author(id=user.id, name=user.name, avatar_url=user.avatar_url),
+            author=author_of(user),
             runners=score.runners,
             downloads=score.downloads,
             value=score.value,

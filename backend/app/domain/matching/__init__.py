@@ -5,9 +5,21 @@ from app.domain.matching.rules import (
     Comparison,
     MatchConfig,
     MatchResult,
+    Outcome,
     Route,
     compare,
     match,
+    verdict,
 )
 
-__all__ = ["AttemptLine", "Comparison", "MatchConfig", "MatchResult", "Route", "compare", "match"]
+__all__ = [
+    "AttemptLine",
+    "Comparison",
+    "MatchConfig",
+    "MatchResult",
+    "Outcome",
+    "Route",
+    "compare",
+    "match",
+    "verdict",
+]
