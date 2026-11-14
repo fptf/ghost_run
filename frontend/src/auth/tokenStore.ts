@@ -2,12 +2,17 @@
 type Listener = (token: string | null) => void;
 
 let accessToken: string | null = null;
+// Известно ли уже, есть ли сессия: до первого ответа /auth/refresh (или входа) — нет.
+let resolved = false;
 const listeners = new Set<Listener>();
 
 export const tokenStore = {
   get: () => accessToken,
+  /** Начальное восстановление сессии завершилось (токен получен или его нет). */
+  isResolved: () => resolved,
   set(token: string | null) {
     accessToken = token;
+    resolved = true;
     listeners.forEach((l) => l(token));
   },
   subscribe(listener: Listener) {
