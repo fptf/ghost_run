@@ -384,7 +384,8 @@ textarea.input {
   cursor: pointer;
 }
 
-.segmented__item[aria-selected="true"] {
+.segmented__item[aria-selected="true"],
+.segmented__item[aria-checked="true"] {
   background: #fff;
   color: var(--text);
   font-weight: 600;

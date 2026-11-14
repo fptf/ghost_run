@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
+import { errorDetail } from "../api/errors";
 import { formatBytes } from "../lib/format";
 import { uploadTrack, useTrack } from "../tracks/api";
-import type { UploadError } from "../tracks/api";
 
 type State =
   | { kind: "idle" }
@@ -81,7 +81,6 @@ export function UploadPage() {
   const { t } = useTranslation();
   const [state, setState] = useState<State>({ kind: "idle" });
   const [dragging, setDragging] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
 
   async function start(file: File) {
     setState({ kind: "uploading", file });
@@ -90,13 +89,12 @@ export function UploadPage() {
       setState({ kind: "processing", file, trackId: data.id });
       return;
     }
-    const err = error as UploadError | { detail?: unknown } | undefined;
-    const detail = typeof err?.detail === "string" ? err.detail : t("upload.failed");
+    const duplicate = response.status === 409;
     setState({
       kind: "failed",
       file,
-      message: response.status === 409 ? t("upload.duplicate") : detail,
-      duplicateId: response.status === 409 ? (err as UploadError).track_id : null,
+      message: duplicate ? t("upload.duplicate") : errorDetail(error, t("upload.failed")),
+      duplicateId: duplicate && error && "track_id" in error ? error.track_id : null,
     });
   }
 
@@ -128,7 +126,6 @@ export function UploadPage() {
           onDrop={onDrop}
         >
           <input
-            ref={input}
             type="file"
             accept={ACCEPT}
             className="visually-hidden"

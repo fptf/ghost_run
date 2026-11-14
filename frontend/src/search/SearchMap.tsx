@@ -8,11 +8,11 @@ import { useTranslation } from "react-i18next";
 import { ACCENT, boundsOf, MAP_STYLE, markerEl } from "../lib/mapStyle";
 import type { View } from "./params";
 
-export interface MapLine {
+interface MapLine {
   id: string;
   coordinates: number[][];
 }
-export interface MapCluster {
+interface MapCluster {
   lon: number;
   lat: number;
   count: number;

@@ -5,8 +5,9 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useParams } from "react-router";
 
 import { api } from "../api/client";
+import { errorDetail, NETWORK_FAILURE } from "../api/errors";
 import { BackButton } from "../components/BackButton";
-import { uploadPhoto, useTrack } from "../tracks/api";
+import { MY_TRACKS_KEY, uploadPhoto, useTrack } from "../tracks/api";
 import type { TrackDetail } from "../tracks/api";
 import { MatchPlaque } from "../tracks/MatchPlaque";
 import { Photos } from "../tracks/Photos";
@@ -16,11 +17,6 @@ import { TrackNotFound } from "./TrackPage";
 const VISIBILITIES = ["public", "link", "private"] as const;
 type VisibilityValue = (typeof VISIBILITIES)[number];
 const MAX_PHOTOS = 5;
-
-function detailOf(error: unknown, fallback: string): string {
-  const detail = (error as { detail?: unknown } | undefined)?.detail;
-  return typeof detail === "string" ? detail : fallback;
-}
 
 function EditForm({ track }: { track: TrackDetail }) {
   const { t } = useTranslation();
@@ -35,23 +31,27 @@ function EditForm({ track }: { track: TrackDetail }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["track", track.id] });
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const { data, error: err } = await api.PATCH("/tracks/{track_id}", {
-      params: { path: { track_id: track.id } },
-      body: { title, description, visibility, publish: true, detach: false },
-    });
+    setError(null);
+    const { data, error: err } = await api
+      .PATCH("/tracks/{track_id}", {
+        params: { path: { track_id: track.id } },
+        body: { title, description, visibility, publish: true, detach: false },
+      })
+      .catch(() => NETWORK_FAILURE);
     setSaving(false);
     if (!data) {
-      setError(detailOf(err, t("track.saveFailed")));
+      setError(errorDetail(err, t("track.saveFailed")));
       return;
     }
     queryClient.setQueryData(["track", track.id], data);
-    void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+    void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
     void queryClient.invalidateQueries({ queryKey: ["me"] });
     // Форма закрывается: новая попытка в группе — экран результата, иначе просмотр трека.
     if (isDraft && data.attempt_of) {
@@ -69,21 +69,33 @@ function EditForm({ track }: { track: TrackDetail }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    const { error: err } = await uploadPhoto(track.id, file);
-    if (err) setError(detailOf(err, t("track.photoFailed")));
+    setError(null);
+    const { response, error: err } = await uploadPhoto(track.id, file).catch(() => NETWORK_FAILURE);
+    if (!response?.ok) setError(errorDetail(err, t("track.photoFailed")));
     void refresh();
   }
 
   async function onDeletePhoto(photoId: string) {
-    await api.DELETE("/tracks/{track_id}/photos/{photo_id}", {
-      params: { path: { track_id: track.id, photo_id: photoId } },
-    });
+    setError(null);
+    const { response, error: err } = await api
+      .DELETE("/tracks/{track_id}/photos/{photo_id}", {
+        params: { path: { track_id: track.id, photo_id: photoId } },
+      })
+      .catch(() => NETWORK_FAILURE);
+    if (!response?.ok) setError(errorDetail(err, t("track.photoDeleteFailed")));
     void refresh();
   }
 
   async function onDeleteTrack() {
-    await api.DELETE("/tracks/{track_id}", { params: { path: { track_id: track.id } } });
-    void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+    setDeleteError(null);
+    const { response, error: err } = await api
+      .DELETE("/tracks/{track_id}", { params: { path: { track_id: track.id } } })
+      .catch(() => NETWORK_FAILURE);
+    if (!response?.ok) {
+      setDeleteError(errorDetail(err, t("track.deleteFailed")));
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
     void queryClient.invalidateQueries({ queryKey: ["me"] });
     queryClient.removeQueries({ queryKey: ["track", track.id] });
     navigate("/me", { replace: true });
@@ -135,7 +147,6 @@ function EditForm({ track }: { track: TrackDetail }) {
                 type="button"
                 role="radio"
                 aria-checked={visibility === v}
-                aria-selected={visibility === v}
                 className="segmented__item"
                 disabled={fullyHidden && v !== "private"}
                 onClick={() => setVisibility(v)}
@@ -173,6 +184,11 @@ function EditForm({ track }: { track: TrackDetail }) {
         ) : (
           <>
             <p className="notice notice--error">{t("track.deleteWarning")}</p>
+            {deleteError && (
+              <p role="alert" className="notice notice--error">
+                {deleteError}
+              </p>
+            )}
             <div className="row">
               <button type="button" className="btn btn--danger btn--sm" onClick={onDeleteTrack}>
                 {t("track.deleteConfirm")}

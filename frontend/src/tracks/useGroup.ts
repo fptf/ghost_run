@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { api } from "../api/client";
+import { MY_TRACKS_KEY } from "./api";
 
 export function useGroup(trackId: string, enabled = true) {
   const queryClient = useQueryClient();
@@ -25,7 +26,7 @@ export function useGroup(trackId: string, enabled = true) {
       .POST("/tracks/{track_id}/group/seen", { params: { path: { track_id: trackId } } })
       .then(() => {
         void queryClient.invalidateQueries({ queryKey: ["me"] });
-        void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+        void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
       });
   }, [viewerIsAuthor, trackId, queryClient]);
 

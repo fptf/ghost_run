@@ -1,6 +1,6 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { Polygon } from "geojson";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 
@@ -8,9 +8,10 @@ import { api } from "../api/client";
 import type { Schemas } from "../api/client";
 import { BackButton } from "../components/BackButton";
 import { TrackMap } from "../components/TrackMap";
-import { formatDate, formatDayMonth, formatDiff, formatDuration, formatKm } from "../lib/format";
-import { useTrack } from "../tracks/api";
+import { formatDate, formatDayMonth, formatDuration, formatKm } from "../lib/format";
+import { useMyTracks, useTrack } from "../tracks/api";
 import { useGpxDownload } from "../tracks/useGpxDownload";
+import { verdictText } from "../tracks/verdict";
 import { TrackNotFound } from "./TrackPage";
 
 type Rule = Schemas["CheckRule"];
@@ -44,13 +45,7 @@ function explain(r: Schemas["CheckResponse"], t: ReturnType<typeof useTranslatio
     date: formatDayMonth(r.track_started_at),
   });
   if (r.matched) {
-    const verdict =
-      r.diff_s === null || r.diff_s === undefined || Math.abs(r.diff_s) < 1
-        ? t("match.equal")
-        : r.diff_s < 0
-          ? t("match.faster", { diff: formatDiff(r.diff_s) })
-          : t("match.slower", { diff: formatDiff(r.diff_s) });
-    return `${run}. ${formatDuration(r.result_time_s)} — ${verdict}.`;
+    return `${run}. ${formatDuration(r.result_time_s)} — ${verdictText(t, r.diff_s)}.`;
   }
   // Главная причина: при обратном ходе проседает и покрытие, поэтому направление — первым.
   const failed = (code: Rule["code"]) => r.rules.some((x) => x.code === code && !x.ok);
@@ -74,10 +69,7 @@ export function CheckPage() {
   const download = useGpxDownload();
   const [chosen, setChosen] = useState<string | null>(null);
 
-  const mine = useQuery({
-    queryKey: ["my-tracks"],
-    queryFn: async () => (await api.GET("/me/tracks")).data ?? [],
-  });
+  const mine = useMyTracks();
   const check = useMutation({
     mutationFn: async (myTrackId: string) => {
       const { data, error } = await api.POST("/tracks/{track_id}/check", {
@@ -88,6 +80,21 @@ export function CheckPage() {
       return data;
     },
   });
+
+  const result = chosen ? check.data : undefined;
+  // Стабильный объект: иначе TrackMap пересоздавал бы карту на каждом рендере страницы.
+  const mapCheck = useMemo(
+    () =>
+      result
+        ? {
+            corridor: (result.corridor as unknown as Polygon | null) ?? null,
+            mine: result.track_line?.coordinates ?? null,
+            // место схода имеет смысл, только если направление совпадает
+            deviation: directionOk(result) ? (result.deviation ?? null) : null,
+          }
+        : null,
+    [result],
+  );
 
   if (route.isPending) {
     return (
@@ -102,7 +109,6 @@ export function CheckPage() {
   const runs = (mine.data ?? [])
     .filter((x) => (x.status === "draft" || x.status === "published") && x.id !== trackId)
     .sort((a, b) => Number(b.attempt_root_id === trackId) - Number(a.attempt_root_id === trackId));
-  const result = chosen ? check.data : undefined;
   const chosenRun = runs.find((x) => x.id === chosen);
   const countedHere = chosenRun?.attempt_root_id === trackId;
 
@@ -163,12 +169,7 @@ export function CheckPage() {
             <TrackMap
               line={result.route_line?.coordinates}
               label={t("check.mapLabel")}
-              check={{
-                corridor: (result.corridor as unknown as Polygon | null) ?? null,
-                mine: result.track_line?.coordinates ?? null,
-                // место схода имеет смысл, только если направление совпадает
-                deviation: directionOk(result) ? (result.deviation ?? null) : null,
-              }}
+              check={mapCheck}
             />
             <p className="map-note">{t("check.legend")}</p>
           </section>

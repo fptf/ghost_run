@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 import { Avatar } from "../components/Avatar";
 import { PaceChart } from "../components/PaceChart";
-import { CATEGORY_LABELS, formatDate } from "../lib/format";
+import { categoryLabel, formatDate } from "../lib/format";
 import type { TrackDetail } from "../tracks/api";
 import { GroupTable } from "../tracks/GroupTable";
 import { TrackMetrics } from "../tracks/TrackSummaryCard";
@@ -26,7 +26,7 @@ export function TrackCardPanel({ track, onBack }: { track: TrackDetail; onBack: 
         </Link>
         <span>
           · {t("search.ranOn", { date: formatDate(track.started_at) })}
-          {track.category && ` · ${CATEGORY_LABELS[track.category] ?? track.category}`}
+          {track.category && ` · ${categoryLabel(track.category)}`}
         </span>
       </p>
       <TrackMetrics track={track} />

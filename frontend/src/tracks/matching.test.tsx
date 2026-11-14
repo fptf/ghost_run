@@ -122,6 +122,20 @@ describe("Плашка совпадения в превью", () => {
     expect(detached).toMatchObject({ detach: true });
   });
 
+  it("ошибка «Не засчитывать» показывается, плашка остаётся", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": PROFILE,
+      [`GET /tracks/${MINE}`]: () => json(track(MINE, { match: MATCH })),
+      [`PATCH /tracks/${MINE}`]: () => json({ detail: "boom" }, 500),
+    });
+    renderApp(`/tracks/${MINE}/edit`);
+    fireEvent.click(await screen.findByRole("button", { name: "Не засчитывать" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось отменить зачёт");
+    expect(screen.getByRole("button", { name: "Не засчитывать" })).toBeEnabled();
+    expect(screen.queryByText(/Не засчитывается в группе маршрута/)).not.toBeInTheDocument();
+  });
+
   it("исчезает при выборе приватной видимости", async () => {
     mockApi({
       "POST /auth/refresh": SESSION,

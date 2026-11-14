@@ -13,7 +13,7 @@ setWorkerUrl(workerUrl);
  * https://operations.osmfoundation.org/policies/tiles/ — атрибуция обязательна, для большой
  * нагрузки нужен свой или коммерческий провайдер (меняется только этот файл).
  */
-export const TILE_HOST = "https://tile.openstreetmap.org";
+const TILE_HOST = "https://tile.openstreetmap.org";
 
 export const MAP_STYLE: StyleSpecification = {
   version: 8,

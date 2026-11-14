@@ -1,4 +1,6 @@
 /** Форматирование только на фронте: в API — метры и секунды. */
+import { isCategory } from "../search/params";
+import type { Category } from "../search/params";
 
 export function formatDuration(totalSeconds: number | null | undefined): string {
   if (totalSeconds == null) return "—";
@@ -38,13 +40,18 @@ export function formatDate(iso: string | null | undefined): string {
   });
 }
 
-export const CATEGORY_LABELS: Record<string, string> = {
+export const CATEGORY_LABELS: Record<Category, string> = {
   "1": "1 км",
   "5": "5 км",
   "10": "10 км",
   "21": "21 км",
   "21+": "Более 21 км",
 };
+
+/** Подпись категории из ответа API (там она строка); неизвестная показывается как есть. */
+export function categoryLabel(category: string): string {
+  return isCategory(category) ? CATEGORY_LABELS[category] : category;
+}
 
 /** Разница во времени без знака: «18 с», «1:05». */
 export function formatDiff(seconds: number): string {

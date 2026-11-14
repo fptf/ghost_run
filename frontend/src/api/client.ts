@@ -9,12 +9,19 @@ function withAuth(request: Request, token: string | null): Request {
   return req;
 }
 
-/** Добавляет access-токен и один раз повторяет запрос после 401, обновив токен. */
+/**
+ * Добавляет access-токен и один раз повторяет запрос после 401, обновив токен.
+ * Пока сессия при загрузке страницы ещё восстанавливается, запрос ждёт этого (делит тот же
+ * /auth/refresh): иначе свой приватный трек по прямой ссылке ушёл бы без токена и выглядел
+ * отсутствующим. Гость ждёт только этот один refresh — дальше сессия считается известной.
+ */
 async function authFetch(request: Request): Promise<Response> {
-  const token = tokenStore.get();
+  const isAuthCall = new URL(request.url).pathname.includes("/auth/");
+  let token = tokenStore.get();
+  if (!token && !isAuthCall && !tokenStore.isResolved()) token = await refreshAccessToken();
   // Берём fetch в момент запроса, а не при создании клиента: так его можно подменить в тестах.
   const response = await globalThis.fetch(withAuth(request, token));
-  if (response.status !== 401 || !token || new URL(request.url).pathname.includes("/auth/")) {
+  if (response.status !== 401 || !token || isAuthCall) {
     return response;
   }
   const fresh = await refreshAccessToken();
