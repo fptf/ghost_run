@@ -50,5 +50,4 @@ def set_role_by_email(session: Session, email: str, role: Role) -> User:
     if user is None:
         raise LookupError(email)
     user.role = role.value
-    session.commit()
     return user

@@ -132,10 +132,12 @@ def refresh(
     try:
         rotation = rotate_refresh_token(db, refresh_token, cfg)
     except InvalidTokenError:
+        db.commit()  # повторное использование отзывает всю сессию — отзыв сохраняется
         # HTTPException отбросил бы заголовки response — удаляем cookie в собственном ответе
         expired = JSONResponse({"detail": "Сессия недействительна"}, status_code=401)
         expired.delete_cookie(REFRESH_COOKIE, path="/")
         return expired
+    db.commit()
     _set_refresh_cookie(response, rotation.refresh_token, cfg)
     return TokenResponse(
         access_token=create_access_token(rotation.user_id, cfg),
@@ -152,4 +154,5 @@ def logout(
 ) -> None:
     if refresh_token:
         revoke_refresh_token(db, refresh_token)
+        db.commit()
     response.delete_cookie(REFRESH_COOKIE, path="/")

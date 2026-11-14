@@ -49,7 +49,9 @@ def recalc_popularity_task() -> int:
     from app.infra.ratings_service import recalc
 
     with open_session(get_config().database_url) as db:
-        return recalc(db)
+        count = recalc(db)
+        db.commit()
+        return count
 
 
 def recalc_interval_s() -> float:

@@ -2,7 +2,6 @@
 
 import random
 import uuid
-from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,51 +11,24 @@ from sqlalchemy.orm import Session
 from app.infra.matching_service import hide_by_moderator
 from app.infra.models import Attempt, Track
 from app.scripts.rematch_all import rematch_all
-from tests.conftest import dev_login
-from tests.gpx_factory import T0, P, offset, straight, to_gpx
-from tests.test_matching_domain import fx, path_before
-from tests.test_tracks_api import Headers, publish, uploaded
-
-Points = list[tuple[float, float, float]]  # lon, lat, секунды от старта
-
-
-def place() -> tuple[float, float]:
-    """Сдвиг (Δlat, Δlon) в своё место для каждого теста."""
-    return random.uniform(-20, 20), random.uniform(-60, 60)
-
-
-def fixture_points(date: str) -> Points:
-    return [(x, y, m) for x, y, _, m in fx(date).full]
-
-
-def gpx(points: Points, where: tuple[float, float], scale: float = 1.0, days_ago: float = 0,
-        jitter_m: float = 0.0) -> bytes:  # fmt: skip
-    """GPX из точек, перенесённых в своё место, с темпом ×scale и датой days_ago дней назад."""
-    dlat, dlon = where
-    start = T0 - timedelta(days=days_ago)
-    out = []
-    for i, (lon, lat, t) in enumerate(points):
-        lat2, lon2 = lat + dlat, lon + dlon
-        if jitter_m:
-            lat2, lon2 = offset(lat2, lon2, jitter_m * ((i % 3) - 1), 0)
-        out.append(P(lat2, lon2, start + timedelta(seconds=t * scale)))
-    return to_gpx(out)
-
-
-def published(client: TestClient, h: Headers, data: bytes, visibility: str = "public") -> dict:
-    track = uploaded(client, h, data)
-    assert track["status"] == "draft", track
-    publish(client, h, track["id"], visibility)
-    return client.get(f"/tracks/{track['id']}", headers=h).json()  # type: ignore[no-any-return]
+from tests.gpx_factory import T0, straight
+from tests.helpers import (
+    ROOT,
+    SAME,
+    dev_login,
+    fixture_points,
+    gpx,
+    path_before,
+    place,
+    published,
+    uploaded,
+)
 
 
 def group(client: TestClient, track_id: str) -> dict:
     resp = client.get(f"/tracks/{track_id}/group")
     assert resp.status_code == 200, resp.text
     return resp.json()  # type: ignore[no-any-return]
-
-
-ROOT, SAME = "20261026", "20261101"  # одна «пятёрка», 01.11 быстрее на ~1,5 мин
 
 
 # --- Automatic Matching --------------------------------------------------------------------
@@ -75,7 +47,7 @@ def test_same_route_faster(client: TestClient) -> None:
     assert attempt["match"]["state"] == "active" and attempt["match"]["beat"] is True
     assert attempt["match"]["diff_s"] < -60
     g = group(client, root["id"])
-    assert g["runners"] == 2
+    assert g["runners"] == 2 and attempt["group_runners"] == 2
     assert [r["runner"]["name"] for r in g["rows"]] == ["Бегун", "Автор"]
     assert g["rows"][0]["beat"] is True and g["rows"][1]["is_author"] is True
     # на карте — только исходный трек, с числом бегунов
@@ -150,6 +122,7 @@ def test_root_hidden_by_moderator(client: TestClient, db: Session) -> None:
     first = published(client, b, gpx(fixture_points(SAME), where))
     second = published(client, c, gpx(fixture_points(ROOT), where, scale=1.02, jitter_m=2))
     hide_by_moderator(db, db.get(Track, uuid.UUID(root["id"])))  # type: ignore[arg-type]
+    db.commit()
 
     g = group(client, second["id"])
     assert g["root"]["id"] == first["id"]

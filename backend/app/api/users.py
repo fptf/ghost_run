@@ -23,7 +23,7 @@ router = APIRouter(tags=["users"])
 class ProfileStats(BaseModel):
     runs: int = 0
     total_distance_m: int = 0
-    # Личные рекорды: код категории -> лучшее время, с (заполняется в add-track-upload).
+    # Личные рекорды: код категории -> лучшее время, с.
     records: dict[str, int] = Field(default_factory=dict)
 
 
@@ -46,7 +46,7 @@ class OwnProfile(PublicProfile):
     role: str
     home: HomePoint | None
     hide_radius_m: int | None
-    new_attempts: int = 0  # счётчик новых попыток (сценарий В), появится в add-route-matching
+    new_attempts: int = 0  # новые попытки других бегунов на маршрутах бегуна (сценарий В)
 
 
 class ProfileUpdate(BaseModel):
@@ -64,6 +64,10 @@ class ProfileUpdate(BaseModel):
         return self
 
 
+def _stats(s: tracks_repo.RunnerStats) -> ProfileStats:
+    return ProfileStats(runs=s.runs, total_distance_m=s.total_distance_m, records=s.records)
+
+
 def _public(db: DbDep, user: User, public_only: bool = True) -> PublicProfile:
     return PublicProfile(
         id=user.id,
@@ -71,7 +75,7 @@ def _public(db: DbDep, user: User, public_only: bool = True) -> PublicProfile:
         avatar_url=user.avatar_url,
         city=user.city,
         about=user.about,
-        stats=ProfileStats(**tracks_repo.stats(db, user.id, public_only=public_only)),
+        stats=_stats(tracks_repo.stats(db, user.id, public_only=public_only)),
     )
 
 
@@ -164,15 +168,14 @@ def user_achievements(user_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> li
     own = viewer is not None and viewer.id == user_id
     return [
         ShowcaseEntry(
-            code=e["achievement"].code,
-            title=e["achievement"].title,
-            description=e["achievement"].description,
-            icon=e["achievement"].icon,
-            count=len(e["items"]),
+            code=g.achievement.code,
+            title=g.achievement.title,
+            description=g.achievement.description,
+            icon=g.achievement.icon,
+            count=len(g.awards),
             items=[
-                ShowcaseItem(track_id=i["track_id"], title=i["title"], awarded_at=i["at"])
-                for i in e["items"]
+                ShowcaseItem(track_id=a.track_id, title=a.title, awarded_at=a.at) for a in g.awards
             ],
         )
-        for e in user_showcase(db, user_id, public_only=not own)
+        for g in user_showcase(db, user_id, public_only=not own)
     ]

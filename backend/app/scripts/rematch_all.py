@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.infra.db import open_session
 from app.infra.matching_service import sync_group
-from app.infra.models import Attempt, AttemptState, Track, TrackStatus, Visibility
+from app.infra.models import Attempt, AttemptState, Track
+from app.infra.tracks_repo import listed_public
 
 
 def rematch_all(db: Session) -> tuple[int, int]:
@@ -20,14 +21,7 @@ def rematch_all(db: Session) -> tuple[int, int]:
     db.flush()
     tracks = list(
         db.execute(
-            select(Track)
-            .where(
-                Track.status == TrackStatus.published.value,
-                Track.visibility == Visibility.public.value,
-                Track.deleted_at.is_(None),
-                Track.hidden_by_moderator.is_(False),
-            )
-            .order_by(Track.published_at, Track.id)
+            select(Track).where(listed_public()).order_by(Track.published_at, Track.id)
         ).scalars()
     )
     attached = 0

@@ -16,8 +16,9 @@ from app.infra.models import RefreshToken, User
 from app.infra.tokens import create_access_token
 from app.main import app
 from app.scripts import set_role
-from tests.conftest import GOOGLE_CLIENT_ID, dev_login
+from tests.conftest import GOOGLE_CLIENT_ID
 from tests.google_fake import FakeGoogle, _keypair
+from tests.helpers import dev_login
 
 
 @pytest.fixture

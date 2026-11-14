@@ -11,10 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.infra.models import Track, TrackDownload
 from app.infra.ratings_service import recalc
-from tests.conftest import dev_login
 from tests.gpx_factory import GEOD, offset, straight, to_gpx
-from tests.test_track_domain import haversine
-from tests.test_tracks_api import Headers, publish, set_home, uploaded
+from tests.helpers import Headers, dev_login, haversine, publish, set_home, uploaded
 
 
 def area() -> tuple[float, float]:
@@ -217,6 +215,7 @@ def test_sort_by_distance_and_popularity(client: TestClient, db: Session) -> Non
         "items"]] == [short["id"], long["id"]]  # fmt: skip
     client.get(f"/tracks/{long['id']}/gpx")  # скачивание поднимает популярность
     recalc(db)  # популярность — из почасового пересчёта (add-ratings)
+    db.commit()
     popular = search(client, bbox=bbox(center), zoom=14, sort="popular")["items"]
     assert popular[0]["id"] == long["id"]
 

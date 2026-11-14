@@ -2,18 +2,25 @@
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
 from geoalchemy2 import Geography
-from sqlalchemy import and_, delete, func, literal, select
+from sqlalchemy import ColumnElement, and_, delete, func, literal, select
 from sqlalchemy.orm import Session
 
 from app.domain.matching import AttemptLine, MatchConfig, MatchResult, Route, compare, match
 from app.infra.achievements_service import sync_achievements
-from app.infra.models import Attempt, AttemptState, Track, TrackStatus, User, Visibility
+from app.infra.geo_types import GEOGRAPHY, GEOMETRY
+from app.infra.models import Attempt, AttemptState, Track, User
 from app.infra.settings_repo import get_setting
+from app.infra.tracks_repo import is_listed_public, public_root
+
+
+def tie_threshold_s(db: Session) -> float:
+    """Порог равного результата (5.2), с."""
+    return float(get_setting(db, "comparison.tie_threshold_s"))
 
 
 def load_config(db: Session) -> MatchConfig:
@@ -27,7 +34,7 @@ def load_config(db: Session) -> MatchConfig:
         length_tolerance=num("matching.length_tolerance"),
         loop_threshold_m=num("matching.loop_threshold_m"),
         direction_min_share=num("matching.direction_min_share"),
-        tie_threshold_s=num("comparison.tie_threshold_s"),
+        tie_threshold_s=tie_threshold_s(db),
     )
 
 
@@ -64,18 +71,32 @@ def attempt_of(db: Session, track: Track) -> AttemptLine | None:
     return AttemptLine(points=[(float(x), float(y), float(m)) for x, y, m in rows])
 
 
+def corridor_geojson(db: Session, root_id: uuid.UUID, width_m: float) -> dict[str, Any] | None:
+    """Коридор вокруг маршрута (GeoJSON-полигон, упрощённый для карты)."""
+    raw = db.execute(
+        select(
+            func.ST_AsGeoJSON(
+                func.ST_Simplify(
+                    func.ST_Buffer(
+                        func.ST_Force2D(Track.route_geometry).cast(GEOGRAPHY), width_m
+                    ).cast(GEOMETRY),
+                    0.00003,
+                ),
+                6,
+            )
+        ).where(Track.id == root_id)
+    ).scalar_one_or_none()
+    return json.loads(raw) if raw else None
+
+
 # ---------- Кандидаты и лучшее совпадение ----------
 
 
-def _root_conditions() -> list[Any]:
+def _root_conditions() -> list[ColumnElement[bool]]:
     return [
-        Track.status == TrackStatus.published.value,
-        Track.visibility == Visibility.public.value,
-        Track.parent_track_id.is_(None),
+        public_root(),
         Track.match_excluded.is_(False),
         Track.root_closed.is_(False),
-        Track.deleted_at.is_(None),
-        Track.hidden_by_moderator.is_(False),
         Track.route_geometry.is_not(None),
     ]
 
@@ -121,9 +142,16 @@ def best_match(db: Session, track: Track, cfg: MatchConfig | None = None) -> Fou
     cfg = cfg or load_config(db)
     if track.match_excluded or track.geometry is None:
         return None
+    roots = candidates(db, track, cfg)
+    if not roots:
+        return None
+    line = attempt_of(db, track)  # линия попытки читается один раз на всех кандидатов
+    if line is None:
+        return None
     best: Found | None = None
-    for root in candidates(db, track, cfg):
-        result = evaluate(db, root, track, cfg)
+    for root in roots:
+        route = route_of(db, root)
+        result = match(route, line, cfg) if route is not None else None
         if result and result.matched and (best is None or result.coverage > best.result.coverage):
             best = Found(root=root, result=result)
     return best
@@ -138,7 +166,7 @@ def _upsert_attempt(
     r = found.result
     by_author = found.root.user_id == track.user_id
     cmp = compare(r.result_time_s, found.root.total_time_s or 0.0, cfg.tie_threshold_s)
-    attempt = db.execute(select(Attempt).where(Attempt.track_id == track.id)).scalar_one_or_none()
+    attempt = attempt_row(db, track.id)
     if attempt is None:
         attempt = Attempt(track_id=track.id)
         db.add(attempt)
@@ -203,12 +231,7 @@ def sync_group(db: Session, track: Track) -> None:
 
     Вызывается после публикации и любых изменений видимости.
     """
-    is_public = (
-        track.status == TrackStatus.published.value
-        and track.visibility == Visibility.public.value
-        and track.deleted_at is None
-        and not track.hidden_by_moderator
-    )
+    is_public = is_listed_public(track)
     if has_group(db, track.id):
         # исходный трек с группой: непубличный перестаёт принимать попытки, группа остаётся
         track.root_closed = not is_public
@@ -253,8 +276,10 @@ def promote_next_root(db: Session, root: Track) -> Track | None:
     db.flush()
     sync_achievements(db, new_root)  # исходный трек ачивок не получает
     cfg = load_config(db)
+    route = route_of(db, new_root)  # маршрут читается один раз на все попытки
     for track in rest:
-        result = evaluate(db, new_root, track, cfg)
+        line = attempt_of(db, track)
+        result = match(route, line, cfg) if route is not None and line is not None else None
         if result and result.matched:
             track.parent_track_id = new_root.id
             _upsert_attempt(
@@ -275,7 +300,6 @@ def hide_by_moderator(db: Session, track: Track) -> None:
     else:
         _leave_group(db, track, AttemptState.detached)
     sync_achievements(db, track)
-    db.commit()
 
 
 def before_account_deletion(db: Session, user_id: uuid.UUID) -> None:
@@ -310,21 +334,36 @@ def root_of(db: Session, track: Track) -> Track:
     return parent or track
 
 
-def group_rows(db: Session, root: Track) -> list[dict[str, Any]]:
+@dataclass(frozen=True)
+class GroupEntry:
+    """Результат бегуна в группе маршрута."""
+
+    user: User
+    track_id: uuid.UUID
+    time_s: float
+    date: datetime | None
+    beat: bool
+    is_author: bool
+    is_root: bool
+    place: int = 0
+    runs: int = 0  # попыток этого бегуна в группе
+
+
+def group_rows(db: Session, root: Track) -> list[GroupEntry]:
     """Лучший результат каждого бегуна (включая автора): место, время, число попыток."""
     author = db.get(User, root.user_id)
-    entries: list[dict[str, Any]] = []
+    entries: list[GroupEntry] = []
     if author is not None and root.total_time_s is not None:
         entries.append(
-            {
-                "user": author,
-                "track_id": root.id,
-                "time_s": root.total_time_s,
-                "date": root.started_at,
-                "beat": False,
-                "is_author": True,
-                "is_root": True,
-            }
+            GroupEntry(
+                user=author,
+                track_id=root.id,
+                time_s=root.total_time_s,
+                date=root.started_at,
+                beat=False,
+                is_author=True,
+                is_root=True,
+            )
         )
     attempts = db.execute(
         select(Attempt, Track, User)
@@ -338,35 +377,30 @@ def group_rows(db: Session, root: Track) -> list[dict[str, Any]]:
     ).all()
     for attempt, track, user in attempts:
         entries.append(
-            {
-                "user": user,
-                "track_id": track.id,
-                "time_s": attempt.result_time_s,
-                "date": track.started_at,
-                "beat": attempt.beat,
-                "is_author": attempt.by_author,
-                "is_root": False,
-            }
+            GroupEntry(
+                user=user,
+                track_id=track.id,
+                time_s=attempt.result_time_s,
+                date=track.started_at,
+                beat=attempt.beat,
+                is_author=attempt.by_author,
+                is_root=False,
+            )
         )
-    best: dict[uuid.UUID, dict[str, Any]] = {}
+    best: dict[uuid.UUID, GroupEntry] = {}
     counts: dict[uuid.UUID, int] = {}
     for e in entries:
-        uid = e["user"].id
+        uid = e.user.id
         counts[uid] = counts.get(uid, 0) + 1
-        if uid not in best or e["time_s"] < best[uid]["time_s"]:
+        if uid not in best or e.time_s < best[uid].time_s:
             best[uid] = e
-    rows = sorted(best.values(), key=lambda e: e["time_s"])
-    for place, row in enumerate(rows, start=1):
-        row["place"] = place
-        row["runs"] = counts[row["user"].id]
-    return rows
+    rows = sorted(best.values(), key=lambda e: e.time_s)
+    return [
+        replace(row, place=place, runs=counts[row.user.id])
+        for place, row in enumerate(rows, start=1)
+    ]
 
 
 def soft_delete_root(track: Track) -> None:
     track.deleted_at = datetime.now(UTC)
     track.root_closed = True
-
-
-def listed_condition() -> Any:
-    """Трек показывается в общих списках: не удалён автором и не скрыт модератором."""
-    return and_(Track.deleted_at.is_(None), Track.hidden_by_moderator.is_(False))

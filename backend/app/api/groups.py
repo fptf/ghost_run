@@ -1,21 +1,33 @@
-import json
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DbDep, OptionalUser
-from app.api.schemas import Author, LineGeometry, RootRef, root_ref
-from app.domain.matching import compare
+from app.api.schemas import (
+    AchievementFields,
+    Author,
+    LineGeometry,
+    RootRef,
+    author_of,
+    line_geometry,
+    root_ref,
+)
+from app.domain.matching import Outcome, compare, verdict
 from app.infra import tracks_repo
 from app.infra.achievements_service import track_achievements
-from app.infra.geo_types import GEOGRAPHY, GEOMETRY
-from app.infra.matching_service import attempt_row, evaluate, group_rows, load_config, root_of
-from app.infra.models import Track, TrackStatus, User
-from app.infra.settings_repo import get_setting
+from app.infra.matching_service import (
+    attempt_row,
+    corridor_geojson,
+    evaluate,
+    group_rows,
+    load_config,
+    root_of,
+    tie_threshold_s,
+)
+from app.infra.models import AttemptState, Track, TrackStatus, User
 
 router = APIRouter(tags=["groups"])
 
@@ -73,27 +85,25 @@ def mark_group_seen(track_id: uuid.UUID, db: DbDep, user: CurrentUser) -> None:
 
 
 def _group(db: DbDep, root: Track, viewer: User | None) -> GroupResponse:
-    ref = root_ref(db, root.id)
-    assert ref is not None
     distance = root.distance_m or 1.0
     rows = [
         GroupRow(
-            place=r["place"],
-            runner=Author(id=r["user"].id, name=r["user"].name, avatar_url=r["user"].avatar_url),
-            track_id=r["track_id"],
-            time_s=r["time_s"],
-            pace_s_per_km=r["time_s"] / (distance / 1000),  # 5.2: по дистанции маршрута
-            date=r["date"],
-            beat=r["beat"],
-            is_author=r["is_author"],
-            is_root=r["is_root"],
-            runs=r["runs"],
-            is_viewer=viewer is not None and r["user"].id == viewer.id,
+            place=r.place,
+            runner=author_of(r.user),
+            track_id=r.track_id,
+            time_s=r.time_s,
+            pace_s_per_km=r.time_s / (distance / 1000),  # 5.2: по дистанции маршрута
+            date=r.date,
+            beat=r.beat,
+            is_author=r.is_author,
+            is_root=r.is_root,
+            runs=r.runs,
+            is_viewer=viewer is not None and r.user.id == viewer.id,
         )
         for r in group_rows(db, root)
     ]
     return GroupResponse(
-        root=ref,
+        root=root_ref(root, tracks_repo.author(db, root)),
         root_distance_m=distance,
         runners=len(rows),
         rows=rows,
@@ -165,25 +175,10 @@ def check_run(
                   required=cfg.length_tolerance),
     ]  # fmt: skip
     cmp = compare(result.result_time_s, root.total_time_s or 0, cfg.tie_threshold_s)
-    corridor_raw = db.execute(
-        select(
-            func.ST_AsGeoJSON(
-                func.ST_Simplify(
-                    func.ST_Buffer(
-                        func.ST_Force2D(Track.route_geometry).cast(GEOGRAPHY), cfg.corridor_width_m
-                    ).cast(GEOMETRY),
-                    0.00003,
-                ),
-                6,
-            )
-        ).where(Track.id == root.id)
-    ).scalar_one_or_none()
-    ref = root_ref(db, root.id)
-    assert ref is not None
     dev = result.deviation
     return CheckResponse(
         matched=result.matched,
-        route=ref,
+        route=root_ref(root, tracks_repo.author(db, root)),
         track_id=mine.id,
         track_title=mine.title,
         track_started_at=mine.started_at,
@@ -191,20 +186,18 @@ def check_run(
         deviation=Deviation(lon=dev.lon, lat=dev.lat, km=dev.km) if dev else None,
         result_time_s=result.result_time_s if result.matched else None,
         diff_s=cmp.diff_s if result.matched else None,
-        route_line=tracks_repo.geojson(db, root.id, "display_geometry"),  # type: ignore[arg-type]
-        corridor=json.loads(corridor_raw) if corridor_raw else None,
-        track_line=tracks_repo.geojson(db, mine.id, "full_display_geometry"),  # type: ignore[arg-type]
+        route_line=line_geometry(tracks_repo.geojson(db, root.id, Track.display_geometry)),
+        corridor=corridor_geojson(db, root.id, cfg.corridor_width_m),
+        track_line=line_geometry(tracks_repo.geojson(db, mine.id, Track.full_display_geometry)),
     )
 
 
-class ResultAchievement(BaseModel):
-    code: str
-    title: str
-    icon: str
+class ResultAchievement(AchievementFields):
+    pass
 
 
 class ResultResponse(BaseModel):
-    outcome: Literal["beat", "slower", "equal"]
+    outcome: Outcome
     route: RootRef
     result_time_s: float
     root_time_s: float
@@ -224,22 +217,20 @@ def read_result(track_id: uuid.UUID, user: CurrentUser, db: DbDep) -> ResultResp
     if track is None or track.user_id != user.id or track.deleted_at is not None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не найден")
     attempt = attempt_row(db, track.id)
-    if attempt is None or attempt.state != "active" or track.parent_track_id is None:
+    if (
+        attempt is None
+        or attempt.state != AttemptState.active.value
+        or track.parent_track_id is None
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не засчитан как попытка")
     root = db.get(Track, track.parent_track_id)
     assert root is not None
     group = _group(db, root, user)
-    ref = root_ref(db, root.id)
-    assert ref is not None
     mine = next((r for r in group.rows if r.is_viewer), None)
-    tie = float(get_setting(db, "comparison.tie_threshold_s"))
-    outcome: Literal["beat", "slower", "equal"] = (
-        "equal" if abs(attempt.diff_s) < tie else "beat" if attempt.diff_s < 0 else "slower"
-    )
     best = group.rows[0].time_s if group.rows else attempt.result_time_s
     return ResultResponse(
-        outcome=outcome,
-        route=ref,
+        outcome=verdict(attempt.diff_s, tie_threshold_s(db)).outcome,
+        route=group.root,
         result_time_s=attempt.result_time_s,
         root_time_s=root.total_time_s or 0,
         diff_s=attempt.diff_s,
@@ -249,8 +240,5 @@ def read_result(track_id: uuid.UUID, user: CurrentUser, db: DbDep) -> ResultResp
         gap_to_best_s=max(0.0, attempt.result_time_s - best),
         by_author=attempt.by_author,
         rows=group.rows,
-        achievements=[
-            ResultAchievement(code=a.code, title=a.title, icon=a.icon)
-            for a in track_achievements(db, track.id)
-        ],
+        achievements=[ResultAchievement.of(a) for a in track_achievements(db, track.id)],
     )

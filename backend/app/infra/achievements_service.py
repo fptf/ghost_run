@@ -1,7 +1,8 @@
 """Ачивки: «Превзошёл» существует, пока попытка в группе и быстрее автора маршрута."""
 
 import uuid
-from typing import Any
+from dataclasses import dataclass, field
+from datetime import datetime
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -12,10 +13,9 @@ from app.infra.models import (
     Attempt,
     AttemptState,
     Track,
-    TrackStatus,
     UserAchievement,
-    Visibility,
 )
+from app.infra.tracks_repo import published_public
 
 OUTPERFORMED = "outperformed"
 
@@ -62,7 +62,21 @@ def track_achievements(db: Session, track_id: uuid.UUID) -> list[Achievement]:
     )
 
 
-def user_showcase(db: Session, user_id: uuid.UUID, public_only: bool) -> list[dict[str, Any]]:
+@dataclass(frozen=True)
+class Award:
+    track_id: uuid.UUID
+    title: str | None
+    at: datetime
+
+
+@dataclass(frozen=True)
+class ShowcaseGroup:
+    achievement: Achievement
+    awards: list[Award] = field(default_factory=list)
+
+
+def user_showcase(db: Session, user_id: uuid.UUID, public_only: bool) -> list[ShowcaseGroup]:
+    """Витрина бегуна: ачивки по коду, внутри — за какие треки получены (новые первыми)."""
     stmt = (
         select(Achievement, UserAchievement, Track)
         .join(UserAchievement, UserAchievement.achievement_id == Achievement.id)
@@ -71,17 +85,11 @@ def user_showcase(db: Session, user_id: uuid.UUID, public_only: bool) -> list[di
         .order_by(UserAchievement.awarded_at.desc())
     )
     if public_only:
-        stmt = stmt.where(
-            Track.status == TrackStatus.published.value,
-            Track.visibility == Visibility.public.value,
-        )
-    grouped: dict[str, dict[str, Any]] = {}
+        stmt = stmt.where(published_public())
+    grouped: dict[str, ShowcaseGroup] = {}
     for ach, ua, track in db.execute(stmt).all():
-        item = grouped.setdefault(
-            ach.code,
-            {"achievement": ach, "items": []},
-        )
-        item["items"].append({"track_id": track.id, "title": track.title, "at": ua.awarded_at})
+        group = grouped.setdefault(ach.code, ShowcaseGroup(achievement=ach))
+        group.awards.append(Award(track_id=track.id, title=track.title, at=ua.awarded_at))
     return list(grouped.values())
 
 

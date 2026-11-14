@@ -13,7 +13,7 @@ from app.domain.tracks.metrics import (
 )
 from app.domain.tracks.model import FileFormat, Point
 from app.domain.tracks.parsers import parse
-from app.domain.tracks.privacy import VisibleRange, visible_range
+from app.domain.tracks.visible_range import VisibleRange, visible_range
 
 LonLatM = tuple[float, float, float]
 
@@ -25,7 +25,7 @@ class GeometryConfig:
 
 
 @dataclass(frozen=True)
-class Visibility:
+class VisiblePart:
     """Видимая часть и производные геометрии в lon/lat."""
 
     range: VisibleRange | None  # None — трек целиком в скрытой зоне
@@ -40,7 +40,7 @@ class ProcessedTrack:
     metrics: Metrics
     full: list[tuple[float, float, float, float]]  # lon, lat, ele, M
     full_display: list[tuple[float, float]]  # весь трек, упрощённый — только автору
-    visibility: Visibility
+    visible_part: VisiblePart
 
 
 def _to_lonlat_m(track: CleanTrack, pts: list[MPoint]) -> list[LonLatM]:
@@ -48,21 +48,21 @@ def _to_lonlat_m(track: CleanTrack, pts: list[MPoint]) -> list[LonLatM]:
     return [(lon, lat, p.m) for (lon, lat), p in zip(ll, pts, strict=True)]
 
 
-def compute_visibility(
+def compute_visible_part(
     track: CleanTrack,
     home: tuple[float, float] | None,
     radius_m: float | None,
     geo_cfg: GeometryConfig,
     seed: str | None = None,
-) -> Visibility:
+) -> VisiblePart:
     """home — (lat, lon) точки дома; seed — см. visible_range."""
     home_xy = track.projection.to_xy([home[0]], [home[1]])[0] if home else None
     vr = visible_range(track.xy, track.cum_m, home_xy, radius_m, seed)
     if vr is None:
-        return Visibility(range=None, visible=[], route=[], display=[])
+        return VisiblePart(range=None, visible=[], route=[], display=[])
     part = slice_by_distance(track.xy, track.cum_m, track.t_s, vr.from_m, vr.to_m)
     display = track.projection.to_lonlat(simplify(part, geo_cfg.simplify_tolerance_m))
-    return Visibility(
+    return VisiblePart(
         range=vr,
         visible=_to_lonlat_m(track, part),
         route=_to_lonlat_m(track, resample(part, geo_cfg.resample_step_m)),
@@ -93,5 +93,5 @@ def process(
         metrics=metrics,
         full=full,
         full_display=track.projection.to_lonlat(simplify(full_parts, geo_cfg.simplify_tolerance_m)),
-        visibility=compute_visibility(track, home, radius_m, geo_cfg, seed),
+        visible_part=compute_visible_part(track, home, radius_m, geo_cfg, seed),
     )

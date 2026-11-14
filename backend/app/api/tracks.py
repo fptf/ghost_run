@@ -1,15 +1,28 @@
 import hashlib
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
-from app.api.schemas import Author, LineGeometry, RootRef, root_ref
+from app.api.schemas import (
+    AchievementFields,
+    Author,
+    LineGeometry,
+    Photo,
+    RootRef,
+    UploadError,
+    as_literal,
+    author_of,
+    error_response,
+    line_geometry,
+    photo_url,
+    root_ref,
+)
+from app.domain.matching import verdict
 from app.domain.tracks.model import REJECT_MESSAGES, RejectReason
 from app.domain.tracks.parsers import detect_format
 from app.infra import tracks_repo
@@ -17,14 +30,13 @@ from app.infra.achievements_service import new_attempts, track_achievements
 from app.infra.matching_service import (
     attempt_row,
     detach,
-    group_rows,
     has_group,
     root_of,
     soft_delete_root,
     sync_group,
+    tie_threshold_s,
 )
-from app.infra.models import Track, TrackPhoto, TrackStatus, User, Visibility
-from app.infra.photos import BadPhotoError, sanitize
+from app.infra.models import Track, TrackStatus, User, Visibility
 from app.infra.queue import TaskQueue, get_queue
 from app.infra.rate_limit import RateLimiter
 from app.infra.s3 import delete_prefix, s3_client
@@ -38,6 +50,11 @@ router = APIRouter(tags=["tracks"])
 QueueDep = Annotated[TaskQueue, Depends(get_queue)]
 StatusLiteral = Literal["processing", "rejected", "draft", "published"]
 VisibilityLiteral = Literal["public", "link", "private"]
+AttemptStateLiteral = Literal["pending", "active", "detached"]
+# Значения Literal-типов совпадают с TrackStatus, Visibility и AttemptState (проверяет тест).
+STATUSES: tuple[StatusLiteral, ...] = get_args(StatusLiteral)
+VISIBILITIES: tuple[VisibilityLiteral, ...] = get_args(VisibilityLiteral)
+ATTEMPT_STATES: tuple[AttemptStateLiteral, ...] = get_args(AttemptStateLiteral)
 FULLY_HIDDEN_MESSAGE = (
     "Трек целиком в скрытой зоне у дома — его можно опубликовать только как приватный"
 )
@@ -50,11 +67,6 @@ class Split(BaseModel):
     idx: int
     distance_m: float
     time_s: float
-
-
-class Photo(BaseModel):
-    id: uuid.UUID
-    url: str
 
 
 class HiddenZone(BaseModel):
@@ -91,7 +103,7 @@ class MatchInfo(BaseModel):
     """Совпадение с маршрутом — автору трека (плашка в превью и на просмотре)."""
 
     root: RootRef
-    state: Literal["pending", "active", "detached"]
+    state: AttemptStateLiteral
     result_time_s: float
     diff_s: float
     beat: bool
@@ -102,10 +114,8 @@ class MatchInfo(BaseModel):
     hidden_time_s: float
 
 
-class AchievementBadge(BaseModel):
-    code: str
-    title: str
-    icon: str
+class AchievementBadge(AchievementFields):
+    pass
 
 
 class KmMark(BaseModel):
@@ -140,27 +150,14 @@ class TrackUpdate(BaseModel):
     detach: bool = False  # «Не засчитывать» — трек не попадает в группы
 
 
-class UploadError(BaseModel):
-    code: str
-    detail: str
-    track_id: uuid.UUID | None = None
-    retry_after_s: int | None = None
-
-
-def _error(status_code: int, code: str, detail: str, **extra: Any) -> JSONResponse:
-    body = UploadError(code=code, detail=detail, **extra).model_dump(mode="json")
-    headers = {"Retry-After": str(extra["retry_after_s"])} if extra.get("retry_after_s") else None
-    return JSONResponse(status_code=status_code, content=body, headers=headers)
-
-
 def _summary(track: Track) -> TrackSummary:
     reason = RejectReason(track.reject_reason) if track.reject_reason else None
     return TrackSummary(
         id=track.id,
-        status=track.status,  # type: ignore[arg-type]
+        status=as_literal(track.status, STATUSES),
         reject_reason=track.reject_reason,
         reject_message=REJECT_MESSAGES[reason] if reason else None,
-        visibility=track.visibility,  # type: ignore[arg-type]
+        visibility=as_literal(track.visibility, VISIBILITIES),
         title=track.title,
         started_at=track.started_at,
         distance_m=track.distance_m,
@@ -174,17 +171,18 @@ def _summary(track: Track) -> TrackSummary:
 
 
 def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
-    author = db.get(User, track.user_id)
-    assert author is not None
+    user = tracks_repo.author(db, track)
     is_owner = viewer is not None and viewer.id == track.user_id
     owner = None
     if is_owner:
-        home = get_home(db, author)
+        home = get_home(db, user)
         owner = OwnerExtras(
-            full_geometry=tracks_repo.geojson(db, track.id, "full_display_geometry"),  # type: ignore[arg-type]
+            full_geometry=line_geometry(
+                tracks_repo.geojson(db, track.id, Track.full_display_geometry)
+            ),
             hidden_zone=(
-                HiddenZone(lat=home[0], lon=home[1], radius_m=author.hide_radius_m)
-                if home and author.hide_radius_m
+                HiddenZone(lat=home[0], lon=home[1], radius_m=user.hide_radius_m)
+                if home and user.hide_radius_m
                 else None
             ),
             fully_hidden=track.fully_hidden,
@@ -199,22 +197,22 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
             Split(idx=s.idx, distance_m=s.distance_m, time_s=s.time_s)
             for s in tracks_repo.splits(db, track.id)
         ],
-        author=Author(id=author.id, name=author.name, avatar_url=author.avatar_url),
-        geometry=tracks_repo.geojson(db, track.id, "display_geometry"),  # type: ignore[arg-type]
+        author=author_of(user),
+        geometry=line_geometry(tracks_repo.geojson(db, track.id, Track.display_geometry)),
         photos=[
-            Photo(id=p.id, url=f"/tracks/{track.id}/photos/{p.id}")
-            for p in tracks_repo.photos(db, track.id)
+            Photo(id=p.id, url=photo_url(track.id, p.id)) for p in tracks_repo.photos(db, track.id)
         ],
         is_owner=is_owner,
         owner=owner,
-        km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
+        km_marks=[KmMark(km=m.km, lon=m.lon, lat=m.lat) for m in km_marks(db, track)],
         match=_match_info(db, track) if is_owner else None,
-        attempt_of=root_ref(db, track.parent_track_id) if track.parent_track_id else None,
-        group_runners=len(group_rows(db, root_of(db, track))) if track.status == "published" else 0,
-        achievements=[
-            AchievementBadge(code=a.code, title=a.title, icon=a.icon)
-            for a in track_achievements(db, track.id)
-        ],
+        attempt_of=_root_ref(db, track.parent_track_id) if track.parent_track_id else None,
+        group_runners=(
+            tracks_repo.runners_count(db, root_of(db, track).id)
+            if track.status == TrackStatus.published.value
+            else 0
+        ),
+        achievements=[AchievementBadge.of(a) for a in track_achievements(db, track.id)],
     )
 
 
@@ -222,17 +220,16 @@ def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
     attempt = attempt_row(db, track.id)
     if attempt is None:
         return None
-    ref = root_ref(db, attempt.root_track_id)
+    ref = _root_ref(db, attempt.root_track_id)
     if ref is None:
         return None
-    tie = float(get_setting(db, "comparison.tie_threshold_s"))
     return MatchInfo(
         root=ref,
-        state=attempt.state,  # type: ignore[arg-type]
+        state=as_literal(attempt.state, ATTEMPT_STATES),
         result_time_s=attempt.result_time_s,
         diff_s=attempt.diff_s,
         beat=attempt.beat,
-        equal=abs(attempt.diff_s) < tie,
+        equal=verdict(attempt.diff_s, tie_threshold_s(db)).equal,
         by_author=attempt.by_author,
         trimmed=attempt.trimmed,
         segment_distance_m=attempt.segment_distance_m,
@@ -240,14 +237,19 @@ def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
     )
 
 
-def _own_track(db: DbDep, track_id: uuid.UUID, user: User) -> Track:
+def _root_ref(db: DbDep, root_id: uuid.UUID) -> RootRef | None:
+    found = tracks_repo.with_author(db, root_id)
+    return root_ref(*found) if found else None
+
+
+def own_track(db: DbDep, track_id: uuid.UUID, user: User) -> Track:
     track = db.get(Track, track_id)
     if track is None or track.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не найден")
     return track
 
 
-def _visible_track(db: DbDep, track_id: uuid.UUID, viewer: User | None) -> Track:
+def visible_track(db: DbDep, track_id: uuid.UUID, viewer: User | None) -> Track:
     track = db.get(Track, track_id)
     if track is None or not tracks_repo.can_view(track, viewer.id if viewer else None):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не найден")
@@ -279,20 +281,22 @@ def upload_track(
     max_bytes = int(get_setting(db, "upload.max_file_bytes"))
     data = file.file.read(max_bytes + 1)
     if len(data) > max_bytes:
-        return _error(413, "too_large", REJECT_MESSAGES[RejectReason.too_large])
+        return error_response(413, "too_large", REJECT_MESSAGES[RejectReason.too_large])
     fmt = detect_format(data[:4096])
     if fmt is None:
-        return _error(415, "unsupported_format", REJECT_MESSAGES[RejectReason.unsupported_format])
+        return error_response(
+            415, "unsupported_format", REJECT_MESSAGES[RejectReason.unsupported_format]
+        )
     sha = hashlib.sha256(data).hexdigest()
     existing = tracks_repo.find_duplicate(db, user.id, sha)
     if existing is not None:
-        return _error(409, "duplicate", "Этот трек уже есть", track_id=existing.id)
+        return error_response(409, "duplicate", "Этот трек уже есть", track_id=existing.id)
 
     limit = int(get_setting(db, "upload.rate_limit_per_hour"))
     retry_after = RateLimiter(cfg).hit_sliding("upload", str(user.id), limit, 3600)
     if retry_after is not None:
         minutes = max(1, (retry_after + 59) // 60)
-        return _error(
+        return error_response(
             429,
             "rate_limited",
             f"Не больше {limit} загрузок в час. Можно продолжить через {minutes} мин",
@@ -313,7 +317,9 @@ def upload_track(
     except IntegrityError:  # тот же файл пришёл параллельным запросом
         db.rollback()
         existing = tracks_repo.find_duplicate(db, user.id, sha)
-        return _error(409, "duplicate", "Этот трек уже есть", track_id=existing and existing.id)
+        return error_response(
+            409, "duplicate", "Этот трек уже есть", track_id=existing and existing.id
+        )
     s3_client(cfg, timeout_s=60).put_object(Bucket=cfg.s3_bucket, Key=source_key(track), Body=data)
     db.commit()
     queue.process_track(track.id)
@@ -325,7 +331,7 @@ def upload_track(
 
 @router.get("/tracks/{track_id}", responses={404: {"description": "Трек не найден"}})
 def read_track(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> TrackDetail:
-    return _detail(db, _visible_track(db, track_id, viewer), viewer)
+    return _detail(db, visible_track(db, track_id, viewer), viewer)
 
 
 @router.get("/me/tracks")
@@ -354,7 +360,7 @@ def user_tracks(user_id: uuid.UUID, db: DbDep) -> list[TrackSummary]:
 def update_track(
     track_id: uuid.UUID, body: TrackUpdate, user: CurrentUser, db: DbDep
 ) -> TrackDetail:
-    track = _own_track(db, track_id, user)
+    track = own_track(db, track_id, user)
     if track.status not in tracks_repo.PROCESSED:
         raise HTTPException(status.HTTP_409_CONFLICT, "Трек ещё не обработан")
     fields = body.model_fields_set
@@ -383,7 +389,7 @@ def update_track(
 
 @router.delete("/tracks/{track_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigDep) -> None:
-    track = _own_track(db, track_id, user)
+    track = own_track(db, track_id, user)
     if has_group(db, track.id):
         # ФТ-9: исходный трек с попытками только прячется — группа и таблица остаются
         soft_delete_root(track)
@@ -393,81 +399,3 @@ def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigD
     db.delete(track)
     db.commit()
     delete_prefix(cfg, prefix)  # после commit: при откате БД файлы остаются целы
-
-
-# ---------- Фото ----------
-
-
-@router.post(
-    "/tracks/{track_id}/photos",
-    status_code=status.HTTP_201_CREATED,
-    response_model=Photo,
-    responses={
-        413: {"model": UploadError},
-        415: {"model": UploadError},
-        422: {"model": UploadError, "description": "Не больше 5 фото"},
-    },
-)
-def add_photo(
-    track_id: uuid.UUID,
-    file: Annotated[UploadFile, File()],
-    user: CurrentUser,
-    db: DbDep,
-    cfg: ConfigDep,
-) -> Any:
-    track = _own_track(db, track_id, user)
-    max_photos = int(get_setting(db, "upload.max_photos"))
-    if len(tracks_repo.photos(db, track.id)) >= max_photos:
-        return _error(422, "too_many_photos", f"не больше {max_photos} фото")
-    max_bytes = int(get_setting(db, "upload.max_photo_bytes"))
-    data = file.file.read(max_bytes + 1)
-    if len(data) > max_bytes:
-        return _error(413, "too_large", f"фото больше {max_bytes // (1024 * 1024)} МБ")
-    try:
-        clean, content_type, ext = sanitize(data)
-    except BadPhotoError:
-        return _error(415, "unsupported_format", "нужно фото JPEG, PNG или WebP")
-    photo = TrackPhoto(track_id=track.id, s3_key="", content_type=content_type)
-    db.add(photo)
-    db.flush()
-    photo.s3_key = f"{track_prefix(track.user_id, track.id)}photos/{photo.id}.{ext}"
-    s3_client(cfg, timeout_s=30).put_object(
-        Bucket=cfg.s3_bucket, Key=photo.s3_key, Body=clean, ContentType=content_type
-    )
-    db.commit()
-    return Photo(id=photo.id, url=f"/tracks/{track.id}/photos/{photo.id}")
-
-
-def _photo(db: DbDep, track: Track, photo_id: uuid.UUID) -> TrackPhoto:
-    photo = db.get(TrackPhoto, photo_id)
-    if photo is None or photo.track_id != track.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Фото не найдено")
-    return photo
-
-
-@router.get(
-    "/tracks/{track_id}/photos/{photo_id}",
-    response_class=Response,
-    responses={200: {"content": {"image/*": {}}}},
-)
-def read_photo(
-    track_id: uuid.UUID, photo_id: uuid.UUID, db: DbDep, cfg: ConfigDep, viewer: OptionalUser
-) -> Response:
-    photo = _photo(db, _visible_track(db, track_id, viewer), photo_id)
-    body = s3_client(cfg, timeout_s=30).get_object(Bucket=cfg.s3_bucket, Key=photo.s3_key)
-    return Response(
-        content=body["Body"].read(),
-        media_type=photo.content_type,
-        headers={"Cache-Control": "private, max-age=3600"},
-    )
-
-
-@router.delete("/tracks/{track_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_photo(
-    track_id: uuid.UUID, photo_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigDep
-) -> None:
-    photo = _photo(db, _own_track(db, track_id, user), photo_id)
-    key = photo.s3_key
-    db.delete(photo)
-    db.commit()
-    s3_client(cfg, timeout_s=30).delete_object(Bucket=cfg.s3_bucket, Key=key)

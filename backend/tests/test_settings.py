@@ -60,4 +60,5 @@ def test_threshold_changed_visible_without_restart(db: Session) -> None:
         assert get_setting(db, key) == 0.85
     finally:
         set_setting(db, key, original)
+        db.commit()
     assert get_setting(db, key) == 0.9

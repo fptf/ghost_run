@@ -12,12 +12,11 @@ from sqlalchemy.orm import Session
 
 from app.config import Config
 from app.domain.tracks.model import FileFormat, RejectReason, TrackRejectedError
-from app.domain.tracks.pipeline import ProcessedTrack, Visibility, process
+from app.domain.tracks.pipeline import ProcessedTrack, VisiblePart, process
 from app.infra import wkt
 from app.infra.db import open_session
 from app.infra.matching_service import save_pending, sync_group
-from app.infra.models import Track, TrackSplit, TrackStatus, User
-from app.infra.models import Visibility as Vis
+from app.infra.models import Track, TrackSplit, TrackStatus, User, Visibility
 from app.infra.s3 import s3_client
 from app.infra.track_settings import load_configs
 from app.infra.users_repo import get_home
@@ -43,13 +42,13 @@ def _geom(ewkt: str | None) -> object:
     return func.ST_GeomFromEWKT(ewkt) if ewkt else None
 
 
-def apply_visibility(track: Track, vis: Visibility) -> None:
+def apply_visible_part(track: Track, vis: VisiblePart) -> None:
     if vis.range is None:
         track.fully_hidden = True
         track.visible_from_m = track.visible_to_m = None
         track.visible_geometry = track.route_geometry = track.display_geometry = None
         track.start_point = track.finish_point = None
-        track.visibility = Vis.private.value  # трек целиком в зоне — только приватный
+        track.visibility = Visibility.private.value  # трек целиком в зоне — только приватный
         return
     track.fully_hidden = False
     track.visible_from_m, track.visible_to_m = vis.range.from_m, vis.range.to_m
@@ -73,7 +72,7 @@ def _apply(db: Session, track: Track, result: ProcessedTrack) -> None:
     track.category = m.category
     track.geometry = _geom(wkt.linestring(result.full, "ZM"))
     track.full_display_geometry = _geom(wkt.linestring(result.full_display))
-    apply_visibility(track, result.visibility)
+    apply_visible_part(track, result.visible_part)
     db.execute(delete(TrackSplit).where(TrackSplit.track_id == track.id))
     for s in m.splits:
         db.add(TrackSplit(track_id=track.id, idx=s.index, distance_m=s.distance_m, time_s=s.time_s))
@@ -204,7 +203,7 @@ def recompute_visibility(cfg: Config, user_id: uuid.UUID) -> None:
             except Exception:
                 log.exception("visibility recompute failed for track %s", track.id)
                 continue
-            apply_visibility(track, result.visibility)
+            apply_visible_part(track, result.visible_part)
             db.flush()
             # видимая часть изменилась — членство в группе и попытка пересчитываются
             try:

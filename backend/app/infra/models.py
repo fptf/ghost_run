@@ -37,10 +37,17 @@ class Role(enum.StrEnum):
     admin = "admin"
 
 
+def _trgm(name: str, column: str) -> Index:
+    """Триграммный индекс для поиска по подстроке (pg_trgm, миграция 0004)."""
+    return Index(name, column, postgresql_using="gin", postgresql_ops={column: "gin_trgm_ops"})
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint("role IN ('runner', 'moderator', 'admin')", name="users_role_check"),
+        _trgm("ix_users_name_trgm", "name"),
+        _trgm("ix_users_city_trgm", "city"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -92,6 +99,12 @@ def _geom(kind: str) -> Geometry:
 class Track(Base):
     __tablename__ = "tracks"
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('processing', 'rejected', 'draft', 'published')", name="tracks_status_check"
+        ),
+        CheckConstraint(
+            "visibility IN ('public', 'link', 'private')", name="tracks_visibility_check"
+        ),
         # один и тот же файл у бегуна — один раз, не считая мягко удалённых (миграция 0009)
         Index(
             "tracks_user_file_unique",
@@ -100,6 +113,13 @@ class Track(Base):
             unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
+        Index("ix_tracks_user_id", "user_id"),
+        Index("ix_tracks_status_visibility", "status", "visibility"),
+        Index("ix_tracks_parent_track_id", "parent_track_id"),
+        Index("ix_tracks_display_geometry", "display_geometry", postgresql_using="gist"),
+        Index("ix_tracks_start_point", "start_point", postgresql_using="gist"),
+        Index("ix_tracks_route_geometry", "route_geometry", postgresql_using="gist"),
+        _trgm("ix_tracks_title_trgm", "title"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -157,6 +177,7 @@ class TrackSplit(Base):
 
 class TrackPhoto(Base):
     __tablename__ = "track_photos"
+    __table_args__ = (Index("ix_track_photos_track_id", "track_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
@@ -167,6 +188,7 @@ class TrackPhoto(Base):
 
 class TrackDownload(Base):
     __tablename__ = "track_downloads"
+    __table_args__ = (Index("ix_track_downloads_track_id", "track_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
@@ -182,6 +204,10 @@ class AttemptState(enum.StrEnum):
 
 class Attempt(Base):
     __tablename__ = "attempts"
+    __table_args__ = (
+        CheckConstraint("state IN ('pending', 'active', 'detached')", name="attempts_state"),
+        Index("ix_attempts_root", "root_track_id", "state"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(
@@ -218,7 +244,10 @@ class Achievement(Base):
 
 class UserAchievement(Base):
     __tablename__ = "user_achievements"
-    __table_args__ = (UniqueConstraint("achievement_id", "track_id", name="user_achievement_once"),)
+    __table_args__ = (
+        UniqueConstraint("achievement_id", "track_id", name="user_achievement_once"),
+        Index("ix_user_achievements_user", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -229,6 +258,7 @@ class UserAchievement(Base):
 
 class PopularityScore(Base):
     __tablename__ = "popularity_scores"
+    __table_args__ = (Index("ix_popularity_category_value", "period", "category", "value"),)
 
     track_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("tracks.id", ondelete="CASCADE"), primary_key=True

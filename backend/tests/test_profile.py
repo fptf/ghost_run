@@ -11,7 +11,7 @@ from app.domain.privacy import RadiusBounds, RadiusOutOfRangeError, validate_hid
 from app.infra.account_cleanup import user_s3_prefix
 from app.infra.models import RefreshToken, User
 from app.infra.s3 import s3_client
-from tests.conftest import dev_login
+from tests.helpers import dev_login
 
 PUBLIC_KEYS = {"id", "name", "avatar_url", "city", "about", "stats"}
 
@@ -90,6 +90,7 @@ def test_radius_bounds_come_from_settings(client: TestClient, db: Session) -> No
 
     original = get_setting(db, "privacy.hide_radius_m")
     set_setting(db, "privacy.hide_radius_m", {"min": 100, "max": 500})
+    db.commit()
     try:
         headers = dev_login(client)
         resp = client.patch(
@@ -98,6 +99,7 @@ def test_radius_bounds_come_from_settings(client: TestClient, db: Session) -> No
         assert resp.status_code == 200
     finally:
         set_setting(db, "privacy.hide_radius_m", original)
+        db.commit()
 
 
 def test_home_requires_radius(client: TestClient) -> None:

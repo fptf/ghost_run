@@ -8,9 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.infra.matching_service import hide_by_moderator, sync_group
 from app.infra.models import Track, UserAchievement
-from tests.conftest import dev_login
-from tests.test_matching_api import ROOT, SAME, fixture_points, gpx, place, published
-from tests.test_tracks_api import uploaded
+from tests.helpers import ROOT, SAME, dev_login, fixture_points, gpx, place, published, uploaded
 
 
 def achievements_of(db: Session, track_id: str) -> int:
@@ -155,6 +153,7 @@ def test_fraud_hidden(client: TestClient, db: Session) -> None:
     attempt = published(client, runner, gpx(fixture_points(ROOT), where, scale=0.9, jitter_m=2))
     assert achievements_of(db, attempt["id"]) == 1
     hide_by_moderator(db, db.get(Track, uuid.UUID(attempt["id"])))  # type: ignore[arg-type]
+    db.commit()
     assert achievements_of(db, attempt["id"]) == 0
     runner_id = client.get("/me", headers=runner).json()["id"]
     assert client.get(f"/users/{runner_id}/achievements", headers=runner).json() == []
