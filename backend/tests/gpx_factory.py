@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from pyproj import Geod
 
-ORIGIN = (42.9, 76.9)  # там же, где обезличенные фикстуры
+ORIGIN = (45.0, 10.0)  # условная точка для синтетических треков
 T0 = datetime(2026, 10, 1, 7, 0, tzinfo=UTC)
 
 

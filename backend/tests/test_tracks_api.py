@@ -1,6 +1,7 @@
 """Spec track-upload через API: загрузка, обработка, приватность, видимость, фото, профиль."""
 
 import io
+import itertools
 import math
 import uuid
 from pathlib import Path
@@ -34,9 +35,12 @@ def uploaded(client: TestClient, headers: Headers, data: bytes, name: str = "run
     return track  # type: ignore[no-any-return]
 
 
+_RUN_SEQ = itertools.count(uuid.uuid4().int % 20_000)
+
+
 def unique_run(distance: float = 3000, **kw) -> bytes:  # type: ignore[no-untyped-def]
     """Каждый вызов — новый файл (сдвиг старта), чтобы не срабатывала защита от дубликатов."""
-    shift = uuid.uuid4().int % 10_000
+    shift = next(_RUN_SEQ) % 20_000  # по счётчику: случайный сдвиг изредка совпадал
     return to_gpx(straight(distance, start=offset(*ORIGIN, shift, 0), **kw))
 
 
