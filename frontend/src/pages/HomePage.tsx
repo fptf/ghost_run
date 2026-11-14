@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CATEGORY_LABELS } from "../lib/format";
 import { DistanceFilter } from "../search/DistanceFilter";
 import {
   getHomeView,
@@ -57,6 +58,8 @@ export function HomePage() {
   const selectedId = params.get("track");
   const [viewport, setViewport] = useState<Viewport | null>(null);
   const [moreOpen, setMoreOpen] = useState(activeExtraFilters(filters) > 0);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false); // телефон: фильтры свёрнуты
+  const [resetKey, setResetKey] = useState(0); // пересоздаёт фильтр дистанции при сбросе
   const [listOpen, setListOpen] = useState(false); // телефон: выдвижной список
   const [panelHidden, setPanelHidden] = useState(false); // десктоп: левая панель
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -67,7 +70,7 @@ export function HomePage() {
   );
   const [nearbyError, setNearbyError] = useState(false);
   // «Показать на карте»: при открытии с ?track=…&fit=1 карта подгоняется под трек один раз.
-  const [fitKey] = useState(() => (params.get("track") && params.get("fit") ? 1 : 0));
+  const [fitKey, setFitKey] = useState(() => (params.get("track") && params.get("fit") ? 1 : 0));
 
   const search = useTrackSearch(filters, viewport, limit);
   const selected = useTrack(selectedId ?? "", { enabled: Boolean(selectedId) });
@@ -109,6 +112,7 @@ export function HomePage() {
     setQuery("");
     setLimit(PAGE_SIZE);
     setMoreOpen(false);
+    setResetKey((k) => k + 1);
     setParams(() => new URLSearchParams());
     setFlyTo({ ...homeView, key: Date.now() });
   }, [homeView, setParams]);
@@ -142,11 +146,35 @@ export function HomePage() {
     ? t("search.foundByText", { count: total })
     : t("search.inArea", { count: total });
 
+  const activeCount =
+    activeExtraFilters(filters) +
+    (filters.fresh ? 1 : 0) +
+    (filters.att ? 1 : 0) +
+    (filters.q.trim() ? 1 : 0);
+  const distanceLabel = filters.cat
+    ? CATEGORY_LABELS[filters.cat]
+    : filters.dmin !== null || filters.dmax !== null
+      ? t("search.customRange", { min: filters.dmin ?? 0, max: filters.dmax ?? "∞" })
+      : t("search.anyDistance");
+  const filtersSummary = activeCount > 0 ? `${distanceLabel} · +${activeCount}` : distanceLabel;
+
   return (
     <main className={`map-page${panelHidden ? " map-page--panel-hidden" : ""}`}>
       <h1 className="visually-hidden">{t("search.title")}</h1>
       <aside className={`map-panel${listOpen ? " map-panel--open" : ""}`}>
-        <div className="map-panel__filters">
+        <div
+          className={`map-panel__filters${filtersCollapsed ? " map-panel__filters--collapsed" : ""}`}
+        >
+          <button
+            type="button"
+            className="filters-compact"
+            aria-expanded={!filtersCollapsed}
+            onClick={() => setFiltersCollapsed(false)}
+          >
+            <strong>{t("search.filters")}</strong>
+            <span className="muted">{filtersSummary}</span>
+            <span aria-hidden>▾</span>
+          </button>
           <div className="search-row">
             <form
               className="search-box"
@@ -187,7 +215,7 @@ export function HomePage() {
               </svg>
             </button>
           </div>
-          <DistanceFilter filters={filters} onChange={update} />
+          <DistanceFilter key={resetKey} filters={filters} onChange={update} />
           <div className="row quick-filters" role="group" aria-label={t("search.quickFilters")}>
             <button
               type="button"
@@ -221,6 +249,13 @@ export function HomePage() {
             )}
           </div>
           {moreOpen && <MoreFilters filters={filters} onChange={update} />}
+          <button
+            type="button"
+            className="link-btn filters-hide"
+            onClick={() => setFiltersCollapsed(true)}
+          >
+            {t("search.hideFilters")} ▴
+          </button>
         </div>
 
         <div className="map-panel__body">
@@ -262,7 +297,14 @@ export function HomePage() {
                   <div className="empty">{t("search.nothing")}</div>
                 )}
                 {data && (
-                  <ResultList items={data.items} selectedId={selectedId} onSelect={select} />
+                  <ResultList
+                    items={data.items}
+                    selectedId={selectedId}
+                    onSelect={(id) => {
+                      select(id);
+                      setFitKey((k) => k + 1); // выбор из списка — показать трек на карте целиком
+                    }}
+                  />
                 )}
                 {data && data.items.length < data.total && (
                   <button

@@ -43,7 +43,11 @@ export function DistanceFilter({
             className="chip"
             aria-pressed={filters.cat === c}
             aria-label={CATEGORY_LABELS[c]}
-            onClick={() => onChange({ cat: filters.cat === c ? null : c, dmin: null, dmax: null })}
+            onClick={() => {
+              // категория и «Своя» взаимоисключающие
+              setCustomOpen(false);
+              onChange({ cat: filters.cat === c ? null : c, dmin: null, dmax: null });
+            }}
           >
             {c}
           </button>
@@ -51,9 +55,10 @@ export function DistanceFilter({
         <button
           type="button"
           className="chip"
-          aria-pressed={customOpen}
+          aria-pressed={customOpen && filters.cat === null}
           onClick={() => {
             if (customOpen) onChange({ dmin: null, dmax: null });
+            else onChange({ cat: null }); // «Своя» сбрасывает выбранную категорию
             setCustomOpen(!customOpen);
           }}
         >

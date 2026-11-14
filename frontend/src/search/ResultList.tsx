@@ -23,8 +23,13 @@ export function ResultList({
             type="button"
             className="result"
             aria-current={it.id === selectedId}
+            title={t("search.opensInPanel")}
             onClick={() => onSelect(it.id)}
           >
+            {/* «›» — откроется здесь, в панели рядом с картой */}
+            <span className="result__go" aria-hidden>
+              ›
+            </span>
             <strong className="result__title">
               {it.title ?? t("track.untitled")}
               {it.is_new && <span className="badge badge--new">{t("search.newBadge")}</span>}

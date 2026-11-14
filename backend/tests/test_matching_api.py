@@ -362,3 +362,13 @@ def test_rematch_dump(client: TestClient, db: Session) -> None:
         db.execute(select(Track.id, Track.parent_track_id).where(Track.id.in_(ids))).all()
     )
     assert parents[ids[0]] is None and parents[ids[1]] == ids[0] and parents[ids[2]] == ids[0]
+
+
+def test_my_tracks_show_attempt_root(client: TestClient) -> None:
+    """Check Shows Existing Attempt: «Мои треки» знают, на какой маршрут засчитана пробежка."""
+    author, runner, where = dev_login(client), dev_login(client), place()
+    root = published(client, author, gpx(fixture_points(ROOT), where))
+    attempt = published(client, runner, gpx(fixture_points(SAME), where))
+    mine = {t["id"]: t for t in client.get("/me/tracks", headers=runner).json()}
+    assert mine[attempt["id"]]["attempt_root_id"] == root["id"]
+    assert mine[attempt["id"]]["is_attempt"] is True

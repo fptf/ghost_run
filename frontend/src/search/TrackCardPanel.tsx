@@ -40,14 +40,23 @@ export function TrackCardPanel({ track, onBack }: { track: TrackDetail; onBack: 
         >
           {t("track.downloadGpx")}
         </button>
-        <Link to={`/tracks/${track.id}/check`} className="btn btn--secondary btn--sm">
-          {t("check.button")}
+        <Link
+          to={`/tracks/${track.id}/check`}
+          className="btn btn--secondary btn--sm"
+          title={t("search.opensPage")}
+        >
+          {t("check.button")} ↗
         </Link>
-        <Link to={`/tracks/${track.id}`} className="btn btn--ghost btn--sm">
-          {t("search.openCard")}
+        <Link
+          to={`/tracks/${track.id}`}
+          className="btn btn--ghost btn--sm"
+          title={t("search.opensPage")}
+        >
+          {t("search.openPage")} ↗
         </Link>
       </div>
-      <GroupTable trackId={track.id} />
+      <p className="field__hint">{t("search.navHint")}</p>
+      <GroupTable trackId={track.id} external />
     </article>
   );
 }

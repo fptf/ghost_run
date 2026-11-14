@@ -223,9 +223,11 @@ describe("Главная: поиск по карте", () => {
     expect(await screen.findByRole("heading", { name: "Набережная до маяка" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Скачать GPX" })).toBeInTheDocument();
     expect(await screen.findByText("Группа маршрута")).toBeInTheDocument();
-    expect(screen.getByText("Ирина К.")).toBeInTheDocument();
+    const irina = await screen.findByRole("link", { name: /Ирина К\./ });
+    expect(irina).toHaveAttribute("href", "/tracks/a1");
+    expect(irina.textContent).toContain("↗");
     expect(screen.getByText("превзошёл")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Проверить мою пробежку" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Проверить мою пробежку ↗" })).toHaveAttribute(
       "href",
       `/tracks/${TRACK}/check`,
     );
@@ -361,5 +363,82 @@ describe("Управление главной", () => {
     renderApp("/?lat=43.2&lon=131.95&z=14");
     await screen.findByText("Набережная до маяка");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("Понятная навигация и фильтры", () => {
+  it("Panel or page: «›» у пунктов списка, «↗» у ссылок на страницу", async () => {
+    mockApi({
+      "POST /auth/refresh": NO_SESSION,
+      "GET /tracks/search": () => searchResponse(),
+      [`GET /tracks/${TRACK}`]: () => json(detail()),
+      [`GET /tracks/${TRACK}/group`]: groupResponse,
+    });
+    renderApp("/");
+    const item = await screen.findByRole("button", { name: /Набережная до маяка/ });
+    expect(item).toHaveAttribute("title", "Откроется здесь, рядом с картой");
+    expect(item.textContent).toContain("›");
+    fireEvent.click(item);
+    expect(await screen.findByRole("link", { name: "Страница трека ↗" })).toHaveAttribute(
+      "href",
+      `/tracks/${TRACK}`,
+    );
+  });
+
+  it("Custom resets category: «Своя» сбрасывает категорию и наоборот", async () => {
+    const { fetchMock } = mockApi({
+      "POST /auth/refresh": NO_SESSION,
+      "GET /tracks/search": () => searchResponse(),
+    });
+    renderApp("/?cat=5");
+    await screen.findByText("Набережная до маяка");
+    expect(screen.getByRole("button", { name: "5 км" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Своя" }));
+    expect(screen.getByRole("button", { name: "5 км" })).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() =>
+      expect(searchCalls(fetchMock).at(-1)?.searchParams.has("category")).toBe(false),
+    );
+    fireEvent.change(screen.getByLabelText("От, км"), { target: { value: "8" } });
+    await waitFor(() =>
+      expect(searchCalls(fetchMock).at(-1)?.searchParams.get("dist_min_km")).toBe("8"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "10 км" }));
+    await waitFor(() => {
+      const last = searchCalls(fetchMock).at(-1) as URL;
+      expect(last.searchParams.get("category")).toBe("10");
+      expect(last.searchParams.has("dist_min_km")).toBe(false);
+    });
+    expect(screen.queryByLabelText("От, км")).not.toBeInTheDocument();
+  });
+
+  it("Collapse filters: сворачиваются в строку со сводкой и разворачиваются", async () => {
+    mockApi({ "POST /auth/refresh": NO_SESSION, "GET /tracks/search": () => searchResponse() });
+    renderApp("/?cat=10&fresh=1");
+    await screen.findByText("Набережная до маяка");
+    fireEvent.click(screen.getByRole("button", { name: /Скрыть фильтры/ }));
+    const compact = screen.getByRole("button", { name: /Фильтры/ });
+    expect(compact).toHaveAttribute("aria-expanded", "false");
+    expect(compact.textContent).toContain("10 км · +1");
+    fireEvent.click(compact);
+    expect(screen.getByRole("button", { name: /Фильтры/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+});
+
+describe("Выбор из списка", () => {
+  it("подгоняет карту под трек; без выбора из списка рамка не меняется", async () => {
+    mockApi({
+      "POST /auth/refresh": NO_SESSION,
+      "GET /tracks/search": () => searchResponse(),
+      [`GET /tracks/${TRACK}`]: () => json(detail()),
+      [`GET /tracks/${TRACK}/group`]: groupResponse,
+    });
+    renderApp("/");
+    await screen.findByText("Набережная до маяка");
+    expect(mapProps.last?.fitKey).toBe(0);
+    fireEvent.click(screen.getByRole("button", { name: /Набережная до маяка/ }));
+    await waitFor(() => expect(mapProps.last?.fitKey).toBeGreaterThan(0));
   });
 });

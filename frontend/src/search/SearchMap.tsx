@@ -63,6 +63,7 @@ export function SearchMap({
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const ready = useRef(false);
+  const fittedKey = useRef(0);
   const clusterMarkers = useRef<Marker[]>([]);
   const endMarkers = useRef<Marker[]>([]);
   const handlers = useRef({ onViewChange, onSelect });
@@ -203,7 +204,9 @@ export function SearchMap({
   // «Показать на карте»: подогнать карту под трек.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || fitKey === 0 || !selectedLine) return;
+    // Подгоняем один раз на каждый запрос (fitKey): клик по линии на карте рамку не трогает.
+    if (!map || fitKey === 0 || !selectedLine || fittedKey.current === fitKey) return;
+    fittedKey.current = fitKey;
     const box = boundsOf(selectedLine);
     if (box) map.fitBounds(box, { padding: 48, maxZoom: 16, duration: 0 });
   }, [fitKey, selectedLine]);

@@ -336,3 +336,60 @@ describe("Проверка: обратное направление", () => {
     );
   });
 });
+
+describe("Проверка: уже засчитанная пробежка", () => {
+  it("Already counted: помечена, стоит первой, в результате — пометка", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": PROFILE,
+      [`GET /tracks/${ROOT}`]: () =>
+        json(
+          track(ROOT, {
+            status: "published",
+            visibility: "public",
+            is_owner: false,
+            owner: null,
+            author: AUTHOR,
+          }),
+        ),
+      "GET /me/tracks": () =>
+        json([
+          {
+            ...track("other", { status: "published" }),
+            title: "Другая пробежка",
+            attempt_root_id: null,
+          },
+          { ...track(MINE, { status: "published" }), title: "Засчитанная", attempt_root_id: ROOT },
+        ]),
+      [`POST /tracks/${ROOT}/check`]: () =>
+        json({
+          matched: true,
+          route: { id: ROOT, title: "Набережная", author: AUTHOR },
+          track_id: MINE,
+          track_title: "Засчитанная",
+          track_started_at: "2026-11-12T08:00:00Z",
+          rules: [
+            { code: "start", ok: true, value: 5, required: 50 },
+            { code: "finish", ok: true, value: 3, required: 50 },
+            { code: "corridor", ok: true, value: 0.99, required: 0.9 },
+            { code: "direction", ok: true, value: 1, required: 0.9 },
+            { code: "length", ok: true, value: 1.01, required: 0.03 },
+          ],
+          deviation: null,
+          result_time_s: 1500,
+          diff_s: -10,
+          route_line: null,
+          corridor: null,
+          track_line: null,
+        }),
+    });
+    renderApp(`/tracks/${ROOT}/check`);
+    const items = await screen.findAllByRole("button", { name: /пробежка|Засчитанная/i });
+    expect(items[0]).toHaveTextContent("Засчитанная");
+    expect(items[0]).toHaveTextContent("Уже засчитана на этот маршрут");
+    fireEvent.click(items[0] as HTMLElement);
+    expect(
+      await screen.findByText("Эта пробежка уже засчитана в группе этого маршрута."),
+    ).toBeInTheDocument();
+  });
+});

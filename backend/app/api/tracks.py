@@ -87,6 +87,7 @@ class TrackSummary(BaseModel):
     created_at: datetime
     new_attempts: int = 0  # новые попытки других бегунов (только в «Моих треках»)
     is_attempt: bool = False  # трек засчитан как попытка в группе маршрута
+    attempt_root_id: uuid.UUID | None = None  # маршрут, на который засчитан
 
 
 class OwnerExtras(BaseModel):
@@ -183,6 +184,7 @@ def _summary(track: Track) -> TrackSummary:
         category=track.category,
         created_at=track.created_at,
         is_attempt=track.parent_track_id is not None,
+        attempt_root_id=track.parent_track_id,
     )
 
 

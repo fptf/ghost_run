@@ -98,10 +98,13 @@ export function CheckPage() {
   }
   if (route.isError || !route.data) return <TrackNotFound />;
 
-  const runs = (mine.data ?? []).filter(
-    (x) => (x.status === "draft" || x.status === "published") && x.id !== trackId,
-  );
+  // Уже засчитанные на этот маршрут — первыми: так сразу видно, что проверять их незачем.
+  const runs = (mine.data ?? [])
+    .filter((x) => (x.status === "draft" || x.status === "published") && x.id !== trackId)
+    .sort((a, b) => Number(b.attempt_root_id === trackId) - Number(a.attempt_root_id === trackId));
   const result = chosen ? check.data : undefined;
+  const chosenRun = runs.find((x) => x.id === chosen);
+  const countedHere = chosenRun?.attempt_root_id === trackId;
 
   return (
     <main className="page">
@@ -131,6 +134,14 @@ export function CheckPage() {
                     }}
                   >
                     <strong className="result__title">{run.title ?? t("track.untitled")}</strong>
+                    {run.attempt_root_id === trackId && (
+                      <span className="status-pill status-pill--counted">
+                        ✓ {t("check.countedHere")}
+                      </span>
+                    )}
+                    {run.attempt_root_id && run.attempt_root_id !== trackId && (
+                      <span className="status-pill">{t("check.countedOther")}</span>
+                    )}
                     <span className="result__meta">
                       {formatDate(run.started_at)} · {formatKm(run.distance_m)} км ·{" "}
                       {formatDuration(run.total_time_s)}
@@ -166,6 +177,10 @@ export function CheckPage() {
               {result.matched ? t("check.matched") : t("check.notMatched")}
             </h2>
             <p>{explain(result, t)}</p>
+            {countedHere && <p className="notice notice--ok">{t("check.alreadyCounted")}</p>}
+            {result.matched && !countedHere && (
+              <p className="notice notice--info">{t("check.matchedNotCounted")}</p>
+            )}
             <ul className="rules">
               {result.rules.map((rule) => (
                 <li key={rule.code} className={`rule rule--${rule.ok ? "ok" : "fail"}`}>

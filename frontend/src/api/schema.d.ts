@@ -910,6 +910,8 @@ export interface components {
       /** Achievements */
       achievements: components["schemas"]["AchievementBadge"][];
       attempt_of: components["schemas"]["RootRef"] | null;
+      /** Attempt Root Id */
+      attempt_root_id?: string | null;
       author: components["schemas"]["Author"];
       /** Avg Pace S Per Km */
       avg_pace_s_per_km: number | null;
@@ -981,6 +983,8 @@ export interface components {
     };
     /** TrackSummary */
     TrackSummary: {
+      /** Attempt Root Id */
+      attempt_root_id?: string | null;
       /** Avg Pace S Per Km */
       avg_pace_s_per_km: number | null;
       /** Category */

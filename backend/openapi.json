@@ -1539,6 +1539,18 @@
               }
             ]
           },
+          "attempt_root_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Root Id"
+          },
           "author": {
             "$ref": "#/components/schemas/Author"
           },
@@ -1808,6 +1820,18 @@
       },
       "TrackSummary": {
         "properties": {
+          "attempt_root_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Root Id"
+          },
           "avg_pace_s_per_km": {
             "anyOf": [
               {

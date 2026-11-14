@@ -21,7 +21,16 @@ function Mark({ row }: { row: Schemas["GroupRow"] }) {
 }
 
 /** Таблица группы маршрута (по макетам Card / DesktopCard): лучший результат каждого бегуна. */
-export function GroupTable({ trackId, limit = 5 }: { trackId: string; limit?: number }) {
+export function GroupTable({
+  trackId,
+  limit = 5,
+  external = false,
+}: {
+  trackId: string;
+  limit?: number;
+  /** В панели главной: ссылки уводят на отдельную страницу — помечаем «↗». */
+  external?: boolean;
+}) {
   const { t } = useTranslation();
   const group = useGroup(trackId);
   const [all, setAll] = useState(false);
@@ -45,8 +54,12 @@ export function GroupTable({ trackId, limit = 5 }: { trackId: string; limit?: nu
               <span className="group-row__who">
                 <Avatar name={row.runner.name} url={row.runner.avatar_url} small />
                 <span className="group-row__name">
-                  <Link to={`/tracks/${row.track_id}`}>
+                  <Link
+                    to={`/tracks/${row.track_id}`}
+                    title={external ? t("search.opensPage") : undefined}
+                  >
                     {row.is_viewer ? t("group.you") : row.runner.name}
+                    {external && <span className="ext-mark"> ↗</span>}
                   </Link>
                   <Mark row={row} />
                 </span>
