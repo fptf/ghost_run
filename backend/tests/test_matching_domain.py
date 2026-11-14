@@ -175,6 +175,19 @@ def test_two_laps_rejected() -> None:
     assert not r.length_ok and r.length_ratio == pytest.approx(2.0, rel=0.02)
 
 
+def test_loop_from_home_with_hidden_zone_matches_neighbour() -> None:
+    """Круг от дома: видна середина, её концы рядом. Сосед стартует от своего дома — засчитано."""
+    plain = fx("20260926")
+    lon0, lat0 = plain.full[0][0], plain.full[0][1]
+    root = fx("20260926", home=(lat0, lon0), radius=400)
+    rt = route(root)
+    assert rt.visible_from_m > 0  # концы маршрута скрыты
+    r = match(rt, run(scaled(line(plain), 0.97)), CFG)
+    assert not r.is_loop
+    assert r.matched, r
+    assert r.result_time_s == pytest.approx(plain.metrics.total_time_s * 0.97, rel=0.02)
+
+
 # --- Privacy Zone Compensation ---------------------------------------------------------------
 
 

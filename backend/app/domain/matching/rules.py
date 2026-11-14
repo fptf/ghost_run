@@ -174,7 +174,11 @@ def match(route: Route, attempt: AttemptLine, cfg: MatchConfig) -> MatchResult:
     r_start, r_finish = r_xy[0], r_xy[-1]
     r_cum = cumulative(r_xy)
     visible_len = route.visible_to_m - route.visible_from_m
-    is_loop = dist(r_start, r_finish) < cfg.loop_threshold_m
+    # Круговой — только целиком видимый маршрут. У круга от дома видна середина, её концы
+    # на границе скрытой зоны тоже рядом, но попытка начинается у своего дома, а не там, —
+    # такой маршрут сопоставляется как обычный участок с досчётом скрытых концов.
+    has_hidden_ends = visible_len < route.full_distance_m - 1.0
+    is_loop = dist(r_start, r_finish) < cfg.loop_threshold_m and not has_hidden_ends
 
     ordered = True
     if is_loop:
