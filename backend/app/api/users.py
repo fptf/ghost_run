@@ -23,7 +23,7 @@ router = APIRouter(tags=["users"])
 class ProfileStats(BaseModel):
     runs: int = 0
     total_distance_m: int = 0
-    # Личные рекорды: код категории -> лучшее время, с (заполняется в add-track-upload).
+    # Личные рекорды: код категории -> лучшее время, с.
     records: dict[str, int] = Field(default_factory=dict)
 
 
@@ -46,7 +46,7 @@ class OwnProfile(PublicProfile):
     role: str
     home: HomePoint | None
     hide_radius_m: int | None
-    new_attempts: int = 0  # счётчик новых попыток (сценарий В), появится в add-route-matching
+    new_attempts: int = 0  # новые попытки других бегунов на маршрутах бегуна (сценарий В)
 
 
 class ProfileUpdate(BaseModel):

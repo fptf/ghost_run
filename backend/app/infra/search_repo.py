@@ -58,13 +58,7 @@ RUNNERS = (
     .scalar_subquery()
     + 1  # автор исходного трека
 )
-DOWNLOADS = (
-    select(func.count())
-    .where(TrackDownload.track_id == Track.id)
-    .correlate(Track)
-    .scalar_subquery()
-)
-# Популярность — из почасового пересчёта (add-ratings); трек без строки ещё не пересчитан — 0.
+# Популярность — из почасового пересчёта (ratings_service); трек без строки ещё не пересчитан — 0.
 POPULARITY = func.coalesce(
     select(PopularityScore.value)
     .where(PopularityScore.track_id == Track.id, PopularityScore.period == "all")

@@ -365,8 +365,3 @@ def group_rows(db: Session, root: Track) -> list[dict[str, Any]]:
 def soft_delete_root(track: Track) -> None:
     track.deleted_at = datetime.now(UTC)
     track.root_closed = True
-
-
-def listed_condition() -> Any:
-    """Трек показывается в общих списках: не удалён автором и не скрыт модератором."""
-    return and_(Track.deleted_at.is_(None), Track.hidden_by_moderator.is_(False))
