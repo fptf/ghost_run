@@ -14,7 +14,7 @@ from app.middleware import UPLOAD_BODY_LIMIT, BodySizeLimit
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Бегуны API", version="0.1.0")
+    app = FastAPI(title="Где побегать? API", version="0.1.0")
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(users_router)

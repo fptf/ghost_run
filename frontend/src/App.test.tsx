@@ -19,7 +19,7 @@ describe("App smoke", () => {
     expect(await screen.findByRole("heading", { name: "Карта маршрутов" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Дистанция" })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Карта/ }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Бегуны" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Где побегать?" })).toBeInTheDocument();
   });
 
   it("показывает 404 для неизвестного маршрута", async () => {
