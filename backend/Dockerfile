@@ -13,4 +13,4 @@ RUN useradd --create-home --uid 1000 app
 USER app
 
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && python -m app.scripts.init_storage && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic upgrade head && python -m app.scripts.init_storage && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"]

@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
 from app.api.schemas import Author, LineGeometry, RootRef, root_ref
@@ -267,15 +268,16 @@ def _visible_track(db: DbDep, track_id: uuid.UUID, viewer: User | None) -> Track
         429: {"model": UploadError, "description": "Лимит загрузок в час"},
     },
 )
-async def upload_track(
+def upload_track(
     file: Annotated[UploadFile, File()],
     user: CurrentUser,
     db: DbDep,
     cfg: ConfigDep,
     queue: QueueDep,
 ) -> Any:
+    # Обычный def: FastAPI выполнит его в пуле потоков, блокирующие S3 и БД не держат event loop.
     max_bytes = int(get_setting(db, "upload.max_file_bytes"))
-    data = await file.read(max_bytes + 1)
+    data = file.file.read(max_bytes + 1)
     if len(data) > max_bytes:
         return _error(413, "too_large", REJECT_MESSAGES[RejectReason.too_large])
     fmt = detect_format(data[:4096])
@@ -306,7 +308,12 @@ async def upload_track(
         source_name=(file.filename or "")[:255] or None,
     )
     db.add(track)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:  # тот же файл пришёл параллельным запросом
+        db.rollback()
+        existing = tracks_repo.find_duplicate(db, user.id, sha)
+        return _error(409, "duplicate", "Этот трек уже есть", track_id=existing and existing.id)
     s3_client(cfg, timeout_s=60).put_object(Bucket=cfg.s3_bucket, Key=source_key(track), Body=data)
     db.commit()
     queue.process_track(track.id)
@@ -382,9 +389,10 @@ def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigD
         soft_delete_root(track)
         db.commit()
         return
-    delete_prefix(cfg, track_prefix(track.user_id, track.id))
+    prefix = track_prefix(track.user_id, track.id)
     db.delete(track)
     db.commit()
+    delete_prefix(cfg, prefix)  # после commit: при откате БД файлы остаются целы
 
 
 # ---------- Фото ----------
@@ -400,7 +408,7 @@ def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigD
         422: {"model": UploadError, "description": "Не больше 5 фото"},
     },
 )
-async def add_photo(
+def add_photo(
     track_id: uuid.UUID,
     file: Annotated[UploadFile, File()],
     user: CurrentUser,
@@ -412,7 +420,7 @@ async def add_photo(
     if len(tracks_repo.photos(db, track.id)) >= max_photos:
         return _error(422, "too_many_photos", f"не больше {max_photos} фото")
     max_bytes = int(get_setting(db, "upload.max_photo_bytes"))
-    data = await file.read(max_bytes + 1)
+    data = file.file.read(max_bytes + 1)
     if len(data) > max_bytes:
         return _error(413, "too_large", f"фото больше {max_bytes // (1024 * 1024)} МБ")
     try:
@@ -459,6 +467,7 @@ def delete_photo(
     track_id: uuid.UUID, photo_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigDep
 ) -> None:
     photo = _photo(db, _own_track(db, track_id, user), photo_id)
-    s3_client(cfg, timeout_s=30).delete_object(Bucket=cfg.s3_bucket, Key=photo.s3_key)
+    key = photo.s3_key
     db.delete(photo)
     db.commit()
+    s3_client(cfg, timeout_s=30).delete_object(Bucket=cfg.s3_bucket, Key=key)

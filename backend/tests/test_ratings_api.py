@@ -116,7 +116,10 @@ def test_schedule_from_settings(migrated: Config, monkeypatch: pytest.MonkeyPatc
             added.append((interval, sig.task, name))
 
     tasks.setup_periodic_tasks(Sender())
-    assert added == [(3600.0, "recalc_popularity", "recalc-popularity")]
+    assert added == [
+        (3600.0, "recalc_popularity", "recalc-popularity"),
+        (300, "requeue_stuck_tracks", "requeue-stuck-tracks"),
+    ]
 
 
 # --- Popular Sort on Map ---------------------------------------------------------------------

@@ -70,7 +70,9 @@ def photos(db: Session, track_id: uuid.UUID) -> list[TrackPhoto]:
 
 def find_duplicate(db: Session, user_id: uuid.UUID, sha256: str) -> Track | None:
     return db.execute(
-        select(Track).where(Track.user_id == user_id, Track.file_sha256 == sha256)
+        select(Track).where(
+            Track.user_id == user_id, Track.file_sha256 == sha256, Track.deleted_at.is_(None)
+        )
     ).scalar_one_or_none()
 
 

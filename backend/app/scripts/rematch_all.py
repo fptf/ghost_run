@@ -7,10 +7,9 @@
 """
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from app.config import get_config
-from app.infra.db import get_engine
+from app.infra.db import open_session
 from app.infra.matching_service import sync_group
 from app.infra.models import Attempt, AttemptState, Track, TrackStatus, Visibility
 
@@ -41,7 +40,7 @@ def rematch_all(db: Session) -> tuple[int, int]:
 
 
 def main() -> None:
-    with sessionmaker(bind=get_engine(get_config().database_url))() as db:
+    with open_session() as db:
         total, attached = rematch_all(db)
     print(f"Треков: {total}, стали попытками: {attached}, групп: {total - attached} исходных")
 

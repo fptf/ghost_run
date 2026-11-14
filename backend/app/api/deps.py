@@ -4,10 +4,10 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from app.config import Config, get_config
-from app.infra.db import get_engine
+from app.infra.db import open_session
 from app.infra.models import User
 from app.infra.rate_limit import RateLimiter
 from app.infra.settings_repo import get_setting
@@ -17,7 +17,7 @@ ConfigDep = Annotated[Config, Depends(get_config)]
 
 
 def get_db(cfg: ConfigDep) -> Iterator[Session]:
-    with sessionmaker(bind=get_engine(cfg.database_url))() as session:
+    with open_session(cfg.database_url) as session:
         yield session
 
 

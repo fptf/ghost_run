@@ -263,6 +263,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/tracks/{track_id}/group/seen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark Group Seen
+     * @description Автор открыл группу своего маршрута — новые попытки просмотрены (сбрасывает счётчик).
+     */
+    post: operations["mark_group_seen_tracks__track_id__group_seen_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/tracks/{track_id}/photos": {
     parameters: {
       query?: never;
@@ -500,6 +520,8 @@ export interface components {
       rows: components["schemas"]["GroupRow"][];
       /** Runners */
       runners: number;
+      /** Viewer Is Author */
+      viewer_is_author: boolean;
     };
     /** GroupRow */
     GroupRow: {
@@ -1738,6 +1760,42 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["GroupResponse"];
         };
+      };
+      /** @description Трек не найден */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  mark_group_seen_tracks__track_id__group_seen_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        track_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Трек не найден */
       404: {

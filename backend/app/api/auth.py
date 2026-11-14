@@ -2,6 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
 
 from app.api.deps import ConfigDep, DbDep, auth_rate_limit
@@ -115,20 +116,26 @@ def sign_in_dev(body: DevSignIn, response: Response, cfg: ConfigDep, db: DbDep) 
     return _sign_in(dev_identity(str(body.email), body.name), response, cfg, db)
 
 
-@router.post("/refresh", responses={401: {"description": "Сессия недействительна"}})
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    responses={401: {"description": "Сессия недействительна"}},
+)
 def refresh(
     response: Response,
     cfg: ConfigDep,
     db: DbDep,
     refresh_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE)] = None,
-) -> TokenResponse:
+) -> TokenResponse | JSONResponse:
     if not refresh_token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Нет сессии")
     try:
         rotation = rotate_refresh_token(db, refresh_token, cfg)
     except InvalidTokenError:
-        response.delete_cookie(REFRESH_COOKIE, path="/")
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Сессия недействительна") from None
+        # HTTPException отбросил бы заголовки response — удаляем cookie в собственном ответе
+        expired = JSONResponse({"detail": "Сессия недействительна"}, status_code=401)
+        expired.delete_cookie(REFRESH_COOKIE, path="/")
+        return expired
     _set_refresh_cookie(response, rotation.refresh_token, cfg)
     return TokenResponse(
         access_token=create_access_token(rotation.user_id, cfg),

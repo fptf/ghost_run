@@ -121,9 +121,12 @@ def test_counter_grows_and_resets(client: TestClient) -> None:
     mine = {t["id"]: t["new_attempts"] for t in client.get("/me/tracks", headers=author).json()}
     assert mine[root["id"]] == 2
 
-    client.get(f"/tracks/{root['id']}/group")  # гость не сбрасывает
+    client.get(f"/tracks/{root['id']}/group", headers=author)  # чтение ничего не меняет
     assert client.get("/me", headers=author).json()["new_attempts"] == 2
-    client.get(f"/tracks/{root['id']}/group", headers=author)
+    assert client.post(f"/tracks/{root['id']}/group/seen").status_code == 401
+    group = client.get(f"/tracks/{root['id']}/group", headers=author).json()
+    assert group["viewer_is_author"] is True
+    assert client.post(f"/tracks/{root['id']}/group/seen", headers=author).status_code == 204
     assert client.get("/me", headers=author).json()["new_attempts"] == 0
 
 

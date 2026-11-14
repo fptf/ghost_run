@@ -383,13 +383,18 @@
           "runners": {
             "title": "Runners",
             "type": "integer"
+          },
+          "viewer_is_author": {
+            "title": "Viewer Is Author",
+            "type": "boolean"
           }
         },
         "required": [
           "root",
           "root_distance_m",
           "runners",
-          "rows"
+          "rows",
+          "viewer_is_author"
         ],
         "title": "GroupResponse",
         "type": "object"
@@ -2636,7 +2641,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^[-\\d.]+(,[-\\d.]+){3}$",
+                  "pattern": "^-?\\d{1,3}(\\.\\d+)?(,-?\\d{1,3}(\\.\\d+)?){3}$",
                   "type": "string"
                 },
                 {
@@ -3238,6 +3243,51 @@
           }
         ],
         "summary": "Read Group",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/tracks/{track_id}/group/seen": {
+      "post": {
+        "description": "Автор открыл группу своего маршрута — новые попытки просмотрены (сбрасывает счётчик).",
+        "operationId": "mark_group_seen_tracks__track_id__group_seen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "track_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Track Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Трек не найден"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Group Seen",
         "tags": [
           "groups"
         ]

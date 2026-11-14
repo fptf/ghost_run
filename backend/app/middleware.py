@@ -16,7 +16,7 @@ class BodySizeLimit:
             return
         headers = dict(scope["headers"])
         length = headers.get(b"content-length")
-        if length is not None and int(length) > self.max_bytes:
+        if length is not None and (not length.isdigit() or int(length) > self.max_bytes):
             await self._reject(send)
             return
 

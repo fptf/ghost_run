@@ -1,4 +1,3 @@
-from collections.abc import Iterator
 from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine
@@ -20,6 +19,11 @@ def get_engine(url: str | None = None, connect_timeout: int = 5) -> Engine:
     )
 
 
-def get_session() -> Iterator[Session]:
-    with sessionmaker(bind=get_engine())() as session:
-        yield session
+@lru_cache
+def _factory(url: str) -> sessionmaker[Session]:
+    return sessionmaker(bind=get_engine(url))
+
+
+def open_session(url: str | None = None) -> Session:
+    """Новая сессия поверх общего пула соединений: `with open_session(url) as db: ...`."""
+    return _factory(url or get_config().database_url)()

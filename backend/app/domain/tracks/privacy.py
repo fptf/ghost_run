@@ -1,10 +1,15 @@
 """Скрытая зона у дома: видна часть трека между выходом из круга в начале и входом в конце."""
 
+import hashlib
+import random
 from dataclasses import dataclass
 
 from app.domain.tracks.geo import dist
 
 BOUNDARY_MARGIN_M = 1.0  # граница видимой части ставится на 1 м снаружи круга
+# Если резать ровно по окружности, края видимых частей нескольких треков лежат на ней —
+# и центр (дом) восстанавливается. Поэтому каждый конец срезается ещё на случайную долю радиуса.
+JITTER_SHARE = 0.5
 
 
 @dataclass(frozen=True)
@@ -33,8 +38,13 @@ def visible_range(
     cum_m: list[float],
     home: tuple[float, float] | None,
     radius_m: float | None,
+    seed: str | None = None,
 ) -> VisibleRange | None:
-    """Границы видимой части по дистанции. None — трек целиком внутри зоны."""
+    """Границы видимой части по дистанции. None — трек целиком внутри зоны.
+
+    seed (id трека) включает случайный добавочный срез; он детерминирован, чтобы пересчёт
+    видимости давал тот же результат.
+    """
     if home is None or not radius_m:
         return VisibleRange(0.0, cum_m[-1])
     r = radius_m + BOUNDARY_MARGIN_M
@@ -53,6 +63,14 @@ def visible_range(
         j = len(inside) - 1 - inside[::-1].index(False)  # последняя точка снаружи
         k = _crossing(xy[j + 1], xy[j], home, r)  # от внутренней точки к внешней
         end_m = cum_m[j + 1] - k * (cum_m[j + 1] - cum_m[j])
+
+    if seed is not None:
+        rnd = random.Random(hashlib.sha256(seed.encode()).digest())
+        extra = radius_m * JITTER_SHARE
+        if inside[0]:
+            start_m += rnd.uniform(0, extra)
+        if inside[-1]:
+            end_m -= rnd.uniform(0, extra)
 
     if end_m <= start_m:
         return None

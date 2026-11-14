@@ -53,10 +53,11 @@ def compute_visibility(
     home: tuple[float, float] | None,
     radius_m: float | None,
     geo_cfg: GeometryConfig,
+    seed: str | None = None,
 ) -> Visibility:
-    """home — (lat, lon) точки дома."""
+    """home — (lat, lon) точки дома; seed — см. visible_range."""
     home_xy = track.projection.to_xy([home[0]], [home[1]])[0] if home else None
-    vr = visible_range(track.xy, track.cum_m, home_xy, radius_m)
+    vr = visible_range(track.xy, track.cum_m, home_xy, radius_m, seed)
     if vr is None:
         return Visibility(range=None, visible=[], route=[], display=[])
     part = slice_by_distance(track.xy, track.cum_m, track.t_s, vr.from_m, vr.to_m)
@@ -76,6 +77,7 @@ def process(
     radius_m: float | None,
     metrics_cfg: MetricsConfig,
     geo_cfg: GeometryConfig,
+    seed: str | None = None,
 ) -> ProcessedTrack:
     points: list[Point] = parse(data, fmt)
     track = clean(points, metrics_cfg)
@@ -91,5 +93,5 @@ def process(
         metrics=metrics,
         full=full,
         full_display=track.projection.to_lonlat(simplify(full_parts, geo_cfg.simplify_tolerance_m)),
-        visibility=compute_visibility(track, home, radius_m, geo_cfg),
+        visibility=compute_visibility(track, home, radius_m, geo_cfg, seed),
     )

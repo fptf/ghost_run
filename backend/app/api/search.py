@@ -53,11 +53,25 @@ class SearchResponse(BaseModel):
     lines: list[Line]
 
 
+_NUM = r"-?\d{1,3}(\.\d+)?"
+
+
+def _parse_bbox(raw: str) -> tuple[float, float, float, float]:
+    """Отдалённая карта отдаёт долготы за ±180 (мир повторяется) — прижимаем к допустимым."""
+    west, south, east, north = (float(v) for v in raw.split(","))
+    west, east = max(-180.0, west), min(180.0, east)
+    south, north = max(-90.0, south), min(90.0, north)
+    if west >= east or south >= north:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Некорректная область карты")
+    return west, south, east, north
+
+
 @router.get("/tracks/search", responses={422: {"description": "Нужна область карты или текст"}})
 def search_tracks(
     db: DbDep,
     bbox: Annotated[
-        str | None, Query(description="west,south,east,north", pattern=r"^[-\d.]+(,[-\d.]+){3}$")
+        str | None,
+        Query(description="west,south,east,north", pattern=rf"^{_NUM}(,{_NUM}){{3}}$"),
     ] = None,
     zoom: Annotated[float, Query(ge=0, le=22)] = 12,
     category: CategoryLiteral | None = None,
@@ -79,10 +93,10 @@ def search_tracks(
     text = (q or "").strip() or None
     if bbox is None and text is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Нужна область карты или текст")
-    box = tuple(float(v) for v in bbox.split(",")) if bbox else None
+    box = _parse_bbox(bbox) if bbox else None
     new_since = datetime.now(UTC) - timedelta(days=int(get_setting(db, "search.new_days")))
     query = search_repo.SearchQuery(
-        bbox=box,  # type: ignore[arg-type]
+        bbox=box,
         zoom=zoom,
         category=category,
         dist_min_m=dist_min_km * 1000 if dist_min_km is not None else None,

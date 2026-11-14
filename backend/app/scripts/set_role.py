@@ -2,10 +2,7 @@
 
 import sys
 
-from sqlalchemy.orm import sessionmaker
-
-from app.config import get_config
-from app.infra.db import get_engine
+from app.infra.db import open_session
 from app.infra.models import Role
 from app.infra.users_repo import set_role_by_email
 
@@ -15,7 +12,7 @@ def main(argv: list[str], database_url: str | None = None) -> int:
         print(__doc__, file=sys.stderr)
         return 2
     email, role = argv[0], Role(argv[1])
-    with sessionmaker(bind=get_engine(database_url or get_config().database_url))() as session:
+    with open_session(database_url) as session:
         try:
             user = set_role_by_email(session, email, role)
         except LookupError:

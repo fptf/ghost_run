@@ -10,11 +10,13 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -89,6 +91,16 @@ def _geom(kind: str) -> Geometry:
 
 class Track(Base):
     __tablename__ = "tracks"
+    __table_args__ = (
+        # один и тот же файл у бегуна — один раз, не считая мягко удалённых (миграция 0009)
+        Index(
+            "tracks_user_file_unique",
+            "user_id",
+            "file_sha256",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))

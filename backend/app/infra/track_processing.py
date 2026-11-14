@@ -2,24 +2,33 @@
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
+from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import delete, func, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session
 
 from app.config import Config
-from app.domain.tracks.model import FileFormat, TrackRejectedError
+from app.domain.tracks.model import FileFormat, RejectReason, TrackRejectedError
 from app.domain.tracks.pipeline import ProcessedTrack, Visibility, process
 from app.infra import wkt
-from app.infra.db import get_engine
-from app.infra.matching_service import save_pending
+from app.infra.db import open_session
+from app.infra.matching_service import save_pending, sync_group
 from app.infra.models import Track, TrackSplit, TrackStatus, User
 from app.infra.models import Visibility as Vis
 from app.infra.s3 import s3_client
 from app.infra.track_settings import load_configs
 from app.infra.users_repo import get_home
 
+if TYPE_CHECKING:
+    from app.infra.queue import TaskQueue
+
 log = logging.getLogger(__name__)
+
+STUCK_AFTER = timedelta(minutes=10)
+GIVE_UP_AFTER = timedelta(hours=1)
 
 
 def track_prefix(user_id: uuid.UUID, track_id: uuid.UUID) -> str:
@@ -82,12 +91,16 @@ def default_title(started_at: datetime) -> str:
     return f"Пробежка {started_at.day} {MONTHS[started_at.month - 1]}"
 
 
+def _download(cfg: Config, track: Track) -> bytes:
+    try:
+        body = s3_client(cfg, timeout_s=60).get_object(Bucket=cfg.s3_bucket, Key=source_key(track))
+        return bytes(body["Body"].read())
+    except (BotoCoreError, ClientError) as exc:
+        raise TransientError(f"source of {track.id} unavailable") from exc
+
+
 def _run(cfg: Config, db: Session, track: Track, user: User) -> ProcessedTrack:
-    data = (
-        s3_client(cfg, timeout_s=60)
-        .get_object(Bucket=cfg.s3_bucket, Key=source_key(track))["Body"]
-        .read()
-    )
+    data = _download(cfg, track)
     metrics_cfg, geo_cfg = load_configs(db)
     return process(
         data,
@@ -96,11 +109,16 @@ def _run(cfg: Config, db: Session, track: Track, user: User) -> ProcessedTrack:
         user.hide_radius_m,
         metrics_cfg,
         geo_cfg,
+        seed=str(track.id),
     )
 
 
+class TransientError(Exception):
+    """Сбой хранилища или БД: трек остаётся в processing и будет обработан повторно."""
+
+
 def process_track(cfg: Config, track_id: uuid.UUID) -> None:
-    with sessionmaker(bind=get_engine(cfg.database_url))() as db:
+    with open_session(cfg.database_url) as db:
         track = db.get(Track, track_id)
         if track is None or track.status != TrackStatus.processing.value:
             return
@@ -108,31 +126,69 @@ def process_track(cfg: Config, track_id: uuid.UUID) -> None:
         assert user is not None
         try:
             result = _run(cfg, db, track, user)
+            _apply(db, track, result)
         except TrackRejectedError as exc:
-            track.status = TrackStatus.rejected.value
-            track.reject_reason = exc.reason.value
-            db.commit()
+            db.rollback()
+            _reject(db, track, exc.reason.value)
             return
+        except (TransientError, OperationalError):
+            db.rollback()
+            raise
         except Exception:
             log.exception("track %s processing failed", track_id)
-            track.status = TrackStatus.rejected.value
-            track.reject_reason = "broken_file"
-            db.commit()
+            db.rollback()
+            _reject(db, track, RejectReason.broken_file.value)
             return
-        _apply(db, track, result)
         track.status = TrackStatus.draft.value
         db.flush()
         # Совпадение с маршрутом — для плашки в превью; в группу трек попадёт при публикации.
+        # Ошибка сопоставления не должна стоить бегуну обработанного трека — откатываем только её.
         try:
-            save_pending(db, track)
+            with db.begin_nested():
+                save_pending(db, track)
         except Exception:
             log.exception("matching failed for track %s", track_id)
         db.commit()
 
 
+def _reject(db: Session, track: Track, reason: str) -> None:
+    track.status = TrackStatus.rejected.value
+    track.reject_reason = reason
+    db.commit()
+
+
+def requeue_stuck(cfg: Config, queue: "TaskQueue", now: datetime | None = None) -> int:
+    """Треки, застрявшие в processing (упал воркер, недоступно хранилище), — снова в очередь.
+
+    Слишком старые помечаются отклонёнными, чтобы бегун не ждал бесконечно.
+    """
+    now = now or datetime.now(UTC)
+    with open_session(cfg.database_url) as db:
+        stuck = (
+            db.execute(
+                select(Track).where(
+                    Track.status == TrackStatus.processing.value,
+                    Track.created_at < now - STUCK_AFTER,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        requeued = 0
+        for track in stuck:
+            if track.created_at < now - GIVE_UP_AFTER:
+                track.status = TrackStatus.rejected.value
+                track.reject_reason = RejectReason.broken_file.value
+            else:
+                queue.process_track(track.id)
+                requeued += 1
+        db.commit()
+        return requeued
+
+
 def recompute_visibility(cfg: Config, user_id: uuid.UUID) -> None:
     """Пересчитывает видимую часть всех обработанных треков бегуна (смена дома или радиуса)."""
-    with sessionmaker(bind=get_engine(cfg.database_url))() as db:
+    with open_session(cfg.database_url) as db:
         user = db.get(User, user_id)
         if user is None:
             return
@@ -149,4 +205,14 @@ def recompute_visibility(cfg: Config, user_id: uuid.UUID) -> None:
                 log.exception("visibility recompute failed for track %s", track.id)
                 continue
             apply_visibility(track, result.visibility)
+            db.flush()
+            # видимая часть изменилась — членство в группе и попытка пересчитываются
+            try:
+                with db.begin_nested():
+                    if track.status == TrackStatus.published.value:
+                        sync_group(db, track)
+                    else:
+                        save_pending(db, track)
+            except Exception:
+                log.exception("rematch after visibility change failed for track %s", track.id)
         db.commit()

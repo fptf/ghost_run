@@ -14,7 +14,7 @@ from app.infra import tracks_repo
 from app.infra.achievements_service import track_achievements
 from app.infra.geo_types import GEOGRAPHY, GEOMETRY
 from app.infra.matching_service import attempt_row, evaluate, group_rows, load_config, root_of
-from app.infra.models import Track, TrackStatus
+from app.infra.models import Track, TrackStatus, User
 from app.infra.settings_repo import get_setting
 
 router = APIRouter(tags=["groups"])
@@ -39,6 +39,7 @@ class GroupResponse(BaseModel):
     root_distance_m: float
     runners: int
     rows: list[GroupRow]
+    viewer_is_author: bool  # клиент отмечает просмотр новых попыток (POST …/group/seen)
 
 
 def _group_track(db: DbDep, track_id: uuid.UUID, viewer_id: uuid.UUID | None) -> Track:
@@ -55,10 +56,23 @@ def _group_track(db: DbDep, track_id: uuid.UUID, viewer_id: uuid.UUID | None) ->
 @router.get("/tracks/{track_id}/group", responses={404: {"description": "Трек не найден"}})
 def read_group(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> GroupResponse:
     root = _group_track(db, track_id, viewer.id if viewer else None)
-    if viewer is not None and viewer.id == root.user_id:
-        # автор открыл группу своего маршрута — новые попытки просмотрены
+    return _group(db, root, viewer)
+
+
+@router.post(
+    "/tracks/{track_id}/group/seen",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={404: {"description": "Трек не найден"}},
+)
+def mark_group_seen(track_id: uuid.UUID, db: DbDep, user: CurrentUser) -> None:
+    """Автор открыл группу своего маршрута — новые попытки просмотрены (сбрасывает счётчик)."""
+    root = _group_track(db, track_id, user.id)
+    if root.user_id == user.id:
         root.attempts_seen_at = datetime.now(UTC)
         db.commit()
+
+
+def _group(db: DbDep, root: Track, viewer: User | None) -> GroupResponse:
     ref = root_ref(db, root.id)
     assert ref is not None
     distance = root.distance_m or 1.0
@@ -78,7 +92,13 @@ def read_group(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> GroupRes
         )
         for r in group_rows(db, root)
     ]
-    return GroupResponse(root=ref, root_distance_m=distance, runners=len(rows), rows=rows)
+    return GroupResponse(
+        root=ref,
+        root_distance_m=distance,
+        runners=len(rows),
+        rows=rows,
+        viewer_is_author=viewer is not None and viewer.id == root.user_id,
+    )
 
 
 class CheckRequest(BaseModel):
@@ -208,7 +228,7 @@ def read_result(track_id: uuid.UUID, user: CurrentUser, db: DbDep) -> ResultResp
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Трек не засчитан как попытка")
     root = db.get(Track, track.parent_track_id)
     assert root is not None
-    group = read_group(root.id, db, user)
+    group = _group(db, root, user)
     ref = root_ref(db, root.id)
     assert ref is not None
     mine = next((r for r in group.rows if r.is_viewer), None)
