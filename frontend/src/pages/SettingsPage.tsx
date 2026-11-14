@@ -30,13 +30,13 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
   const [lat, setLat] = useState(me.home ? String(me.home.lat) : "");
   const [lon, setLon] = useState(me.home ? String(me.home.lon) : "");
   const [radius, setRadius] = useState(String(me.hide_radius_m ?? 300));
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
     const hasHome = lat.trim() !== "" && lon.trim() !== "";
-    const { data, error } = await api.PATCH("/me", {
+    const { data, error: err } = await api.PATCH("/me", {
       body: {
         name,
         city,
@@ -51,11 +51,11 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
       // Форма закрывается, как у трека: открываем профиль.
       navigate("/me", { replace: true, state: { flash: "saved" } });
     } else {
-      setMessage({ ok: false, text: errorText(error, t("settings.saveFailed")) });
+      setError(errorText(err, t("settings.saveFailed")));
     }
   }
 
-  function useMyLocation() {
+  function fillMyLocation() {
     navigator.geolocation?.getCurrentPosition((pos) => {
       setLat(pos.coords.latitude.toFixed(6));
       setLon(pos.coords.longitude.toFixed(6));
@@ -133,7 +133,7 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
             </label>
           </div>
           <div className="row">
-            <button type="button" className="btn btn--secondary btn--sm" onClick={useMyLocation}>
+            <button type="button" className="btn btn--secondary btn--sm" onClick={fillMyLocation}>
               {t("settings.myLocation")}
             </button>
           </div>
@@ -153,9 +153,9 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
         <button type="submit" className="btn btn--primary btn--block">
           {t("settings.save")}
         </button>
-        {message && (
-          <p role="status" className={`notice notice--${message.ok ? "ok" : "error"}`}>
-            {message.text}
+        {error && (
+          <p role="alert" className="notice notice--error">
+            {error}
           </p>
         )}
       </form>

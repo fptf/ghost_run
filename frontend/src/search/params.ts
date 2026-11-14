@@ -1,9 +1,15 @@
 /** Состояние главной карты в адресе страницы: им можно поделиться, «Назад» работает. */
+import type { operations } from "../api/schema";
 
 export const VLADIVOSTOK = { lat: 43.1155, lon: 131.8855, z: 12 };
 
-export const CATEGORIES = ["1", "5", "10", "21", "21+"] as const;
-export type Category = (typeof CATEGORIES)[number];
+/** Категория дистанции — из контракта API (параметр `category` рейтингов). */
+export type Category = operations["read_rating_ratings_get"]["parameters"]["query"]["category"];
+export const CATEGORIES = ["1", "5", "10", "21", "21+"] as const satisfies readonly Category[];
+
+export function isCategory(value: string | null | undefined): value is Category {
+  return (CATEGORIES as readonly string[]).includes(value ?? "");
+}
 export const SORTS = ["popular", "distance", "pace", "date", "attempts"] as const;
 export type Sort = (typeof SORTS)[number];
 
@@ -29,22 +35,6 @@ export interface View {
   z: number;
 }
 
-export const EMPTY_FILTERS: Filters = {
-  cat: null,
-  dmin: null,
-  dmax: null,
-  tmin: null,
-  tmax: null,
-  pmin: null,
-  pmax: null,
-  from: null,
-  to: null,
-  att: null,
-  fresh: null,
-  q: "",
-  sort: "popular",
-};
-
 function num(p: URLSearchParams, key: string): number | null {
   const raw = p.get(key);
   if (raw === null || raw === "") return null;
@@ -57,7 +47,7 @@ export function readFilters(p: URLSearchParams): Filters {
   const sort = p.get("sort");
   const att = p.get("att");
   return {
-    cat: (CATEGORIES as readonly string[]).includes(cat ?? "") ? (cat as Category) : null,
+    cat: isCategory(cat) ? cat : null,
     dmin: num(p, "dmin"),
     dmax: num(p, "dmax"),
     tmin: num(p, "tmin"),

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { CATEGORY_LABELS, formatDate, formatDuration, formatKm, formatPace } from "../lib/format";
+import { categoryLabel, formatDate, formatDuration, formatKm, formatPace } from "../lib/format";
 import type { TrackSummary } from "../tracks/api";
 
 export function TrackList({
@@ -24,7 +24,7 @@ export function TrackList({
               <strong>{tr.title ?? t("track.untitled")}</strong>
               <span className="muted">
                 {formatDate(tr.started_at ?? tr.created_at)}
-                {tr.category && ` · ${CATEGORY_LABELS[tr.category] ?? tr.category}`}
+                {tr.category && ` · ${categoryLabel(tr.category)}`}
               </span>
             </span>
             {tr.status === "draft" || tr.status === "published" ? (

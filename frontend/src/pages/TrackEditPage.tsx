@@ -135,7 +135,6 @@ function EditForm({ track }: { track: TrackDetail }) {
                 type="button"
                 role="radio"
                 aria-checked={visibility === v}
-                aria-selected={visibility === v}
                 className="segmented__item"
                 disabled={fullyHidden && v !== "private"}
                 onClick={() => setVisibility(v)}

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { Avatar } from "../components/Avatar";
 import { BackButton } from "../components/BackButton";
-import { CATEGORY_LABELS } from "../lib/format";
+import { categoryLabel } from "../lib/format";
 import { useTrack } from "../tracks/api";
 import { useAuth } from "../auth/useAuth";
 import { GroupTable } from "../tracks/GroupTable";
@@ -54,7 +54,7 @@ export function TrackPage() {
         <div className="page-head__title">
           <h1>{tr.title ?? t("track.untitled")}</h1>
           <p className="muted">
-            {tr.category && `${CATEGORY_LABELS[tr.category] ?? tr.category} · `}
+            {tr.category && `${categoryLabel(tr.category)} · `}
             {tr.is_owner ? (
               tr.status === "published" ? (
                 t(`track.visibility.${tr.visibility}`)

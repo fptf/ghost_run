@@ -5,7 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { api } from "../api/client";
 import { Avatar } from "../components/Avatar";
 import { CATEGORY_LABELS, formatDuration, formatKm, formatPace } from "../lib/format";
-import { CATEGORIES } from "../search/params";
+import { CATEGORIES, isCategory } from "../search/params";
 import type { Category } from "../search/params";
 
 /** Рейтинги популярных маршрутов по категориям дистанции (ФТ-27–28), период «всё время». */
@@ -13,9 +13,7 @@ export function RatingsPage() {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const raw = params.get("category");
-  const category: Category = (CATEGORIES as readonly string[]).includes(raw ?? "")
-    ? (raw as Category)
-    : "5";
+  const category: Category = isCategory(raw) ? raw : "5";
 
   const rating = useQuery({
     queryKey: ["ratings", category],
@@ -45,7 +43,7 @@ export function RatingsPage() {
             aria-selected={category === c}
             onClick={() => setParams({ category: c }, { replace: true })}
           >
-            {CATEGORY_LABELS[c] === "Более 21 км" ? "21+" : CATEGORY_LABELS[c]}
+            {c === "21+" ? c : CATEGORY_LABELS[c]}
           </button>
         ))}
       </div>

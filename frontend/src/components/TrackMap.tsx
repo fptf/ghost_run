@@ -9,7 +9,7 @@ import { boundsOf, MAP_STYLE, markerEl } from "../lib/mapStyle";
 
 type Coords = number[][];
 
-export interface TrackMapProps {
+interface TrackMapProps {
   /** Видимая часть трека (то, что видят другие). */
   line: Coords | null | undefined;
   /** Весь трек — только автору, рисуется под видимой частью пунктиром. */

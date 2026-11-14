@@ -24,5 +24,4 @@ export function mockApi(routes: Record<string, Handler>) {
   return { calls, fetchMock };
 }
 
-export const HEALTH_OK = () => json({ status: "ok", checks: { db: "ok", redis: "ok", s3: "ok" } });
 export const NO_SESSION = () => json({ detail: "Нет сессии" }, 401);

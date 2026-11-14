@@ -21,7 +21,7 @@ function neighbours(rows: Row[]): Row[] {
   return shown.sort((a, b) => a.place - b.place);
 }
 
-export function ShareButton({ path, text }: { path: string; text: string }) {
+function ShareButton({ path, text }: { path: string; text: string }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   async function share() {

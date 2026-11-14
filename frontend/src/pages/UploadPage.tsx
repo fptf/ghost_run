@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
@@ -81,7 +81,6 @@ export function UploadPage() {
   const { t } = useTranslation();
   const [state, setState] = useState<State>({ kind: "idle" });
   const [dragging, setDragging] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
 
   async function start(file: File) {
     setState({ kind: "uploading", file });
@@ -128,7 +127,6 @@ export function UploadPage() {
           onDrop={onDrop}
         >
           <input
-            ref={input}
             type="file"
             accept={ACCEPT}
             className="visually-hidden"
