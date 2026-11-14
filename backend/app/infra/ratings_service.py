@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import ColumnElement, and_, delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.domain.ratings import Weights, popularity
@@ -30,21 +31,30 @@ def recalc(db: Session) -> int:
         select(Track.id, Track.category, group_runners(), downloads_sq).where(_listed_roots())
     ).all()
     now = datetime.now(UTC)
-    ids = []
-    for track_id, category, runners_raw, downloads in rows:
-        runners = int(runners_raw)
-        likes = 0  # лайков в MVP нет (ФТ-31 — этап 2)
-        ids.append(track_id)
-        db.merge(
-            PopularityScore(
-                track_id=track_id,
-                period=PERIOD_ALL,
-                category=category,
-                runners=runners,
-                downloads=int(downloads),
-                likes=likes,
-                value=popularity(runners, int(downloads), likes, weights),
-                computed_at=now,
+    likes = 0  # лайков в MVP нет (ФТ-31 — этап 2)
+    scores = [
+        {
+            "track_id": track_id,
+            "period": PERIOD_ALL,
+            "category": category,
+            "runners": int(runners),
+            "downloads": int(downloads),
+            "likes": likes,
+            "value": popularity(int(runners), int(downloads), likes, weights),
+            "computed_at": now,
+        }
+        for track_id, category, runners, downloads in rows
+    ]
+    ids = [s["track_id"] for s in scores]
+    if scores:
+        upsert = insert(PopularityScore).values(scores)
+        db.execute(
+            upsert.on_conflict_do_update(
+                index_elements=[PopularityScore.track_id, PopularityScore.period],
+                set_={
+                    col: upsert.excluded[col]
+                    for col in ("category", "runners", "downloads", "likes", "value", "computed_at")
+                },
             )
         )
     db.execute(

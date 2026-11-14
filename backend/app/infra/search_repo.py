@@ -177,14 +177,14 @@ def km_marks(db: Session, track: Track) -> list[dict[str, float]]:
         return []
     fracs = [(k * 1000 - start) / (end - start) for k in kms]
     geog = func.ST_Force2D(Track.visible_geometry).cast(GEOGRAPHY)
-    marks = []
-    for k, f in zip(kms, fracs, strict=True):
+    columns = []
+    for f in fracs:
         point = func.ST_LineInterpolatePoint(geog, literal(f)).cast(GEOMETRY)
-        x, y = db.execute(
-            select(func.ST_X(point), func.ST_Y(point)).where(Track.id == track.id)
-        ).one()
-        marks.append({"km": k, "lon": float(x), "lat": float(y)})
-    return marks
+        columns += [func.ST_X(point), func.ST_Y(point)]
+    row = db.execute(select(*columns).where(Track.id == track.id)).one()  # все отметки сразу
+    return [
+        {"km": k, "lon": float(row[2 * i]), "lat": float(row[2 * i + 1])} for i, k in enumerate(kms)
+    ]
 
 
 def record_download(db: Session, track_id: uuid.UUID, user_id: uuid.UUID | None) -> None:

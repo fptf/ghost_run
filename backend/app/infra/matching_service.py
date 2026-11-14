@@ -142,9 +142,16 @@ def best_match(db: Session, track: Track, cfg: MatchConfig | None = None) -> Fou
     cfg = cfg or load_config(db)
     if track.match_excluded or track.geometry is None:
         return None
+    roots = candidates(db, track, cfg)
+    if not roots:
+        return None
+    line = attempt_of(db, track)  # линия попытки читается один раз на всех кандидатов
+    if line is None:
+        return None
     best: Found | None = None
-    for root in candidates(db, track, cfg):
-        result = evaluate(db, root, track, cfg)
+    for root in roots:
+        route = route_of(db, root)
+        result = match(route, line, cfg) if route is not None else None
         if result and result.matched and (best is None or result.coverage > best.result.coverage):
             best = Found(root=root, result=result)
     return best
@@ -159,7 +166,7 @@ def _upsert_attempt(
     r = found.result
     by_author = found.root.user_id == track.user_id
     cmp = compare(r.result_time_s, found.root.total_time_s or 0.0, cfg.tie_threshold_s)
-    attempt = db.execute(select(Attempt).where(Attempt.track_id == track.id)).scalar_one_or_none()
+    attempt = attempt_row(db, track.id)
     if attempt is None:
         attempt = Attempt(track_id=track.id)
         db.add(attempt)
@@ -269,8 +276,10 @@ def promote_next_root(db: Session, root: Track) -> Track | None:
     db.flush()
     sync_achievements(db, new_root)  # исходный трек ачивок не получает
     cfg = load_config(db)
+    route = route_of(db, new_root)  # маршрут читается один раз на все попытки
     for track in rest:
-        result = evaluate(db, new_root, track, cfg)
+        line = attempt_of(db, track)
+        result = match(route, line, cfg) if route is not None and line is not None else None
         if result and result.matched:
             track.parent_track_id = new_root.id
             _upsert_attempt(
