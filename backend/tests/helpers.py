@@ -3,7 +3,6 @@
 import io
 import itertools
 import math
-import random
 import uuid
 from datetime import timedelta
 from pathlib import Path
@@ -84,9 +83,17 @@ def fixture_points(date: str) -> Points:
     return [(x, y, m) for x, y, _, m in fx(date).full]
 
 
+_PLACES = itertools.count()
+
+
 def place() -> tuple[float, float]:
-    """Сдвиг (Δlat, Δlon) в своё место для каждого теста."""
-    return random.uniform(-20, 20), random.uniform(-60, 60)
+    """Сдвиг (Δlat, Δlon) в своё место для каждого теста.
+
+    Клетки сетки 0,5° × 1° не пересекаются: маршрут одного теста не засчитает попытку другого
+    (случайный сдвиг изредка сводил два теста в одно место).
+    """
+    k = next(_PLACES)
+    return -2 + (k // 100) * 0.5, -50 + (k % 100) * 1.0
 
 
 def gpx(points: Points, where: tuple[float, float], scale: float = 1.0, days_ago: float = 0,

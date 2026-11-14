@@ -47,3 +47,4 @@ uploads/
 
 # Секреты демо-стенда (создаются на сервере)
 /deploy/demo.env
+/.claude/worktrees/
