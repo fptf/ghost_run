@@ -5,6 +5,8 @@ import type { Filters } from "./params";
 import type { Viewport } from "./SearchMap";
 
 export const PAGE_SIZE = 20;
+/** Больше API не отдаёт за один запрос (`limit` ≤ 100, иначе 422). */
+export const MAX_LIMIT = 100;
 
 export function useTrackSearch(filters: Filters, viewport: Viewport | null, limit: number) {
   const q = filters.q.trim();

@@ -26,7 +26,7 @@ import { ResultList } from "../search/ResultList";
 import { SearchMap } from "../search/SearchMap";
 import type { Viewport } from "../search/SearchMap";
 import { TrackCardPanel } from "../search/TrackCardPanel";
-import { PAGE_SIZE, useTrackSearch } from "../search/useSearch";
+import { MAX_LIMIT, PAGE_SIZE, useTrackSearch } from "../search/useSearch";
 import { useUrlParams } from "../search/useUrlParams";
 import { useTrack } from "../tracks/api";
 
@@ -311,11 +311,11 @@ export function HomePage() {
                     }}
                   />
                 )}
-                {data && data.items.length < data.total && (
+                {data && data.items.length < data.total && limit < MAX_LIMIT && (
                   <button
                     type="button"
                     className="btn btn--secondary btn--block"
-                    onClick={() => setLimit(limit + PAGE_SIZE)}
+                    onClick={() => setLimit(Math.min(limit + PAGE_SIZE, MAX_LIMIT))}
                   >
                     {t("search.more")}
                   </button>

@@ -162,6 +162,31 @@ describe("Главная: поиск по карте", () => {
     expect(mapProps.last?.initialView).toEqual({ lat: 43.1155, lon: 131.8855, z: 12 });
   });
 
+  it("«Показать ещё» не просит у API больше 100 и прячется на пределе", async () => {
+    const { fetchMock } = mockApi({
+      "POST /auth/refresh": NO_SESSION,
+      "GET /tracks/search": (req) => {
+        const limit = Number(new URL(req.url).searchParams.get("limit"));
+        if (limit > 100) return json({ detail: "limit" }, 422);
+        const items = Array.from({ length: limit }, (_, i) => item(`t${i}`, `Маршрут ${i}`));
+        return json({ total: 250, items, mode: "lines", clusters: [], lines: [] });
+      },
+    });
+    renderApp("/");
+    await screen.findByText("Маршрут 0");
+    for (const expected of ["40", "60", "80", "100"]) {
+      fireEvent.click(await screen.findByRole("button", { name: "Показать ещё" }));
+      await waitFor(() =>
+        expect(searchCalls(fetchMock).at(-1)?.searchParams.get("limit")).toBe(expected),
+      );
+    }
+    expect(await screen.findByText("Маршрут 99")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Показать ещё" })).not.toBeInTheDocument();
+    expect(searchCalls(fetchMock).every((u) => Number(u.searchParams.get("limit")) <= 100)).toBe(
+      true,
+    );
+  });
+
   it("категория 5 км уходит в запрос и в адрес страницы", async () => {
     const { fetchMock } = mockApi({
       "POST /auth/refresh": NO_SESSION,
