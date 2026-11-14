@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { api } from "../api/client";
-import { formatDiff, formatDuration, formatKm } from "../lib/format";
+import { formatDuration, formatKm } from "../lib/format";
 import type { TrackDetail } from "./api";
+import { verdictText } from "./verdict";
 
 /** Плашка совпадения с маршрутом (по макету Preview): итог сравнения и «Не засчитывать». */
 export function MatchPlaque({ track, visibility }: { track: TrackDetail; visibility: string }) {
@@ -21,11 +22,7 @@ export function MatchPlaque({ track, visibility }: { track: TrackDetail; visibil
   // Приватные и «по ссылке» не сопоставляются: плашка исчезает (сценарий А).
   if (visibility !== "public") return null;
 
-  const verdict = m.equal
-    ? t("match.equal")
-    : m.diff_s < 0
-      ? t("match.faster", { diff: formatDiff(m.diff_s) })
-      : t("match.slower", { diff: formatDiff(m.diff_s) });
+  const verdict = verdictText(t, m.diff_s, m.equal);
 
   async function onDetach() {
     setBusy(true);

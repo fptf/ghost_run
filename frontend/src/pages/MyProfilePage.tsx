@@ -1,14 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 
-import { api } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { useMe } from "../auth/useMe";
 import { AchievementShowcase } from "../components/AchievementShowcase";
 import { ProfileView } from "../components/ProfileView";
 import { TrackList } from "../components/TrackList";
+import { useMyTracks } from "../tracks/api";
 
 const FEEDS = ["tracks", "attempts", "achievements"] as const;
 type Feed = (typeof FEEDS)[number];
@@ -20,10 +19,7 @@ export function MyProfilePage() {
   const navigate = useNavigate();
   const flash = (useLocation().state as { flash?: string } | null)?.flash;
   const [feed, setFeed] = useState<Feed>("tracks");
-  const tracks = useQuery({
-    queryKey: ["my-tracks"],
-    queryFn: async () => (await api.GET("/me/tracks")).data ?? [],
-  });
+  const tracks = useMyTracks();
 
   if (!me.data) {
     return (

@@ -4,9 +4,9 @@ import type { ChangeEvent, DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
+import { errorDetail } from "../api/errors";
 import { formatBytes } from "../lib/format";
 import { uploadTrack, useTrack } from "../tracks/api";
-import type { UploadError } from "../tracks/api";
 
 type State =
   | { kind: "idle" }
@@ -89,13 +89,12 @@ export function UploadPage() {
       setState({ kind: "processing", file, trackId: data.id });
       return;
     }
-    const err = error as UploadError | { detail?: unknown } | undefined;
-    const detail = typeof err?.detail === "string" ? err.detail : t("upload.failed");
+    const duplicate = response.status === 409;
     setState({
       kind: "failed",
       file,
-      message: response.status === 409 ? t("upload.duplicate") : detail,
-      duplicateId: response.status === 409 ? (err as UploadError).track_id : null,
+      message: duplicate ? t("upload.duplicate") : errorDetail(error, t("upload.failed")),
+      duplicateId: duplicate && error && "track_id" in error ? error.track_id : null,
     });
   }
 

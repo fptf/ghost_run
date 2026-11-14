@@ -5,18 +5,15 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { api } from "../api/client";
+import { errorDetail } from "../api/errors";
 import type { Schemas } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { BackButton } from "../components/BackButton";
 import { useMe } from "../auth/useMe";
+import { MY_TRACKS_KEY } from "../tracks/api";
 
 const RADIUS_MIN = 200;
 const RADIUS_MAX = 500;
-
-function errorText(error: unknown, fallback: string): string {
-  const detail = (error as { detail?: unknown } | undefined)?.detail;
-  return typeof detail === "string" ? detail : fallback;
-}
 
 function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
   const { t } = useTranslation();
@@ -47,11 +44,11 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
     });
     if (data) {
       queryClient.setQueryData(["me"], data);
-      void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+      void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
       // Форма закрывается, как у трека: открываем профиль.
       navigate("/me", { replace: true, state: { flash: "saved" } });
     } else {
-      setError(errorText(err, t("settings.saveFailed")));
+      setError(errorDetail(err, t("settings.saveFailed")));
     }
   }
 

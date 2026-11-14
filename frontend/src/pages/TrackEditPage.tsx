@@ -5,8 +5,9 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useParams } from "react-router";
 
 import { api } from "../api/client";
+import { errorDetail } from "../api/errors";
 import { BackButton } from "../components/BackButton";
-import { uploadPhoto, useTrack } from "../tracks/api";
+import { MY_TRACKS_KEY, uploadPhoto, useTrack } from "../tracks/api";
 import type { TrackDetail } from "../tracks/api";
 import { MatchPlaque } from "../tracks/MatchPlaque";
 import { Photos } from "../tracks/Photos";
@@ -16,11 +17,6 @@ import { TrackNotFound } from "./TrackPage";
 const VISIBILITIES = ["public", "link", "private"] as const;
 type VisibilityValue = (typeof VISIBILITIES)[number];
 const MAX_PHOTOS = 5;
-
-function detailOf(error: unknown, fallback: string): string {
-  const detail = (error as { detail?: unknown } | undefined)?.detail;
-  return typeof detail === "string" ? detail : fallback;
-}
 
 function EditForm({ track }: { track: TrackDetail }) {
   const { t } = useTranslation();
@@ -47,11 +43,11 @@ function EditForm({ track }: { track: TrackDetail }) {
     });
     setSaving(false);
     if (!data) {
-      setError(detailOf(err, t("track.saveFailed")));
+      setError(errorDetail(err, t("track.saveFailed")));
       return;
     }
     queryClient.setQueryData(["track", track.id], data);
-    void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+    void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
     void queryClient.invalidateQueries({ queryKey: ["me"] });
     // Форма закрывается: новая попытка в группе — экран результата, иначе просмотр трека.
     if (isDraft && data.attempt_of) {
@@ -70,7 +66,7 @@ function EditForm({ track }: { track: TrackDetail }) {
     e.target.value = "";
     if (!file) return;
     const { error: err } = await uploadPhoto(track.id, file);
-    if (err) setError(detailOf(err, t("track.photoFailed")));
+    if (err) setError(errorDetail(err, t("track.photoFailed")));
     void refresh();
   }
 
@@ -83,7 +79,7 @@ function EditForm({ track }: { track: TrackDetail }) {
 
   async function onDeleteTrack() {
     await api.DELETE("/tracks/{track_id}", { params: { path: { track_id: track.id } } });
-    void queryClient.invalidateQueries({ queryKey: ["my-tracks"] });
+    void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
     void queryClient.invalidateQueries({ queryKey: ["me"] });
     queryClient.removeQueries({ queryKey: ["track", track.id] });
     navigate("/me", { replace: true });
