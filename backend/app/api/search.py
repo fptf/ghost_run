@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel
 
 from app.api.deps import DbDep, OptionalUser
-from app.api.tracks import Author
+from app.api.schemas import Author
 from app.infra import search_repo
 from app.infra.models import Track
 from app.infra.settings_repo import get_setting

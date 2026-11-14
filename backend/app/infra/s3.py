@@ -20,3 +20,14 @@ def s3_client(cfg: Config, timeout_s: int | None = None) -> Any:
             retries={"max_attempts": 1},
         ),
     )
+
+
+def delete_prefix(cfg: Config, prefix: str) -> None:
+    """Удаляет все объекты бакета с префиксом (файлы трека, пользователя)."""
+    client = s3_client(cfg, timeout_s=30)
+    for page in client.get_paginator("list_objects_v2").paginate(
+        Bucket=cfg.s3_bucket, Prefix=prefix
+    ):
+        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+        if keys:
+            client.delete_objects(Bucket=cfg.s3_bucket, Delete={"Objects": keys})

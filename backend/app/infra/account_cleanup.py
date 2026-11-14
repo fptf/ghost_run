@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Callable
 
 from app.config import Config
-from app.infra.s3 import s3_client
+from app.infra.s3 import delete_prefix
 
 Cleanup = Callable[[Config, uuid.UUID], None]
 CLEANUPS: list[Cleanup] = []
@@ -25,12 +25,7 @@ def user_s3_prefix(user_id: uuid.UUID) -> str:
 
 @register
 def delete_user_files(cfg: Config, user_id: uuid.UUID) -> None:
-    client = s3_client(cfg, timeout_s=30)
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=cfg.s3_bucket, Prefix=user_s3_prefix(user_id)):
-        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
-        if keys:
-            client.delete_objects(Bucket=cfg.s3_bucket, Delete={"Objects": keys})
+    delete_prefix(cfg, user_s3_prefix(user_id))
 
 
 def run_cleanups(cfg: Config, user_id: uuid.UUID) -> None:

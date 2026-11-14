@@ -9,6 +9,7 @@ from typing import Any, Literal
 from sqlalchemy import ColumnElement, Select, and_, func, literal, or_, select
 from sqlalchemy.orm import Session, aliased
 
+from app.infra.geo_types import GEOGRAPHY, GEOMETRY
 from app.infra.models import (
     PopularityScore,
     Track,
@@ -200,27 +201,15 @@ def km_marks(db: Session, track: Track) -> list[dict[str, float]]:
     if not kms or end <= start:
         return []
     fracs = [(k * 1000 - start) / (end - start) for k in kms]
-    geog = func.ST_Force2D(Track.visible_geometry).cast(_geography())
+    geog = func.ST_Force2D(Track.visible_geometry).cast(GEOGRAPHY)
     marks = []
     for k, f in zip(kms, fracs, strict=True):
-        point = func.ST_LineInterpolatePoint(geog, literal(f)).cast(_geometry())
+        point = func.ST_LineInterpolatePoint(geog, literal(f)).cast(GEOMETRY)
         x, y = db.execute(
             select(func.ST_X(point), func.ST_Y(point)).where(Track.id == track.id)
         ).one()
         marks.append({"km": k, "lon": float(x), "lat": float(y)})
     return marks
-
-
-def _geography() -> Any:
-    from geoalchemy2 import Geography
-
-    return Geography(srid=4326)
-
-
-def _geometry() -> Any:
-    from geoalchemy2 import Geometry
-
-    return Geometry(srid=4326)
 
 
 def record_download(db: Session, track_id: uuid.UUID, user_id: uuid.UUID | None) -> None:

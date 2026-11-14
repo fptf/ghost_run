@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.api.deps import DbDep
-from app.api.tracks import Author
+from app.api.schemas import Author
 from app.infra.ratings_service import rating
 
 router = APIRouter(tags=["ratings"])

@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.api.deps import ConfigDep, CurrentUser, DbDep, OptionalUser
+from app.api.schemas import Author, LineGeometry, RootRef, root_ref
 from app.domain.tracks.model import REJECT_MESSAGES, RejectReason
 from app.domain.tracks.parsers import detect_format
 from app.infra import tracks_repo
@@ -25,7 +26,7 @@ from app.infra.models import Track, TrackPhoto, TrackStatus, User, Visibility
 from app.infra.photos import BadPhotoError, sanitize
 from app.infra.queue import TaskQueue, get_queue
 from app.infra.rate_limit import RateLimiter
-from app.infra.s3 import s3_client
+from app.infra.s3 import delete_prefix, s3_client
 from app.infra.search_repo import km_marks
 from app.infra.settings_repo import get_setting
 from app.infra.track_processing import source_key, track_prefix
@@ -44,21 +45,10 @@ FULLY_HIDDEN_MESSAGE = (
 # ---------- Схемы ----------
 
 
-class LineGeometry(BaseModel):
-    type: Literal["LineString"]
-    coordinates: list[list[float]]
-
-
 class Split(BaseModel):
     idx: int
     distance_m: float
     time_s: float
-
-
-class Author(BaseModel):
-    id: uuid.UUID
-    name: str
-    avatar_url: str | None
 
 
 class Photo(BaseModel):
@@ -94,12 +84,6 @@ class OwnerExtras(BaseModel):
     full_geometry: LineGeometry | None
     hidden_zone: HiddenZone | None
     fully_hidden: bool
-
-
-class RootRef(BaseModel):
-    id: uuid.UUID
-    title: str | None
-    author: Author
 
 
 class MatchInfo(BaseModel):
@@ -224,7 +208,7 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
         owner=owner,
         km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
         match=_match_info(db, track) if is_owner else None,
-        attempt_of=_root_ref(db, track.parent_track_id) if track.parent_track_id else None,
+        attempt_of=root_ref(db, track.parent_track_id) if track.parent_track_id else None,
         group_runners=len(group_rows(db, root_of(db, track))) if track.status == "published" else 0,
         achievements=[
             AchievementBadge(code=a.code, title=a.title, icon=a.icon)
@@ -233,23 +217,11 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
     )
 
 
-def _root_ref(db: DbDep, root_id: uuid.UUID) -> RootRef | None:
-    root = db.get(Track, root_id)
-    author = db.get(User, root.user_id) if root else None
-    if root is None or author is None:
-        return None
-    return RootRef(
-        id=root.id,
-        title=root.title,
-        author=Author(id=author.id, name=author.name, avatar_url=author.avatar_url),
-    )
-
-
 def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
     attempt = attempt_row(db, track.id)
     if attempt is None:
         return None
-    ref = _root_ref(db, attempt.root_track_id)
+    ref = root_ref(db, attempt.root_track_id)
     if ref is None:
         return None
     tie = float(get_setting(db, "comparison.tie_threshold_s"))
@@ -402,16 +374,6 @@ def update_track(
     return _detail(db, track, user)
 
 
-def _delete_prefix(cfg: ConfigDep, prefix: str) -> None:
-    client = s3_client(cfg, timeout_s=30)
-    for page in client.get_paginator("list_objects_v2").paginate(
-        Bucket=cfg.s3_bucket, Prefix=prefix
-    ):
-        keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
-        if keys:
-            client.delete_objects(Bucket=cfg.s3_bucket, Delete={"Objects": keys})
-
-
 @router.delete("/tracks/{track_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigDep) -> None:
     track = _own_track(db, track_id, user)
@@ -420,7 +382,7 @@ def delete_track(track_id: uuid.UUID, user: CurrentUser, db: DbDep, cfg: ConfigD
         soft_delete_root(track)
         db.commit()
         return
-    _delete_prefix(cfg, track_prefix(track.user_id, track.id))
+    delete_prefix(cfg, track_prefix(track.user_id, track.id))
     db.delete(track)
     db.commit()
 

@@ -8,10 +8,11 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DbDep, OptionalUser
-from app.api.tracks import Author, LineGeometry, RootRef, _root_ref
+from app.api.schemas import Author, LineGeometry, RootRef, root_ref
 from app.domain.matching import compare
 from app.infra import tracks_repo
 from app.infra.achievements_service import track_achievements
+from app.infra.geo_types import GEOGRAPHY, GEOMETRY
 from app.infra.matching_service import attempt_row, evaluate, group_rows, load_config, root_of
 from app.infra.models import Track, TrackStatus
 from app.infra.settings_repo import get_setting
@@ -58,7 +59,7 @@ def read_group(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> GroupRes
         # автор открыл группу своего маршрута — новые попытки просмотрены
         root.attempts_seen_at = datetime.now(UTC)
         db.commit()
-    ref = _root_ref(db, root.id)
+    ref = root_ref(db, root.id)
     assert ref is not None
     distance = root.distance_m or 1.0
     rows = [
@@ -149,15 +150,15 @@ def check_run(
             func.ST_AsGeoJSON(
                 func.ST_Simplify(
                     func.ST_Buffer(
-                        func.ST_Force2D(Track.route_geometry).cast(_geog()), cfg.corridor_width_m
-                    ).cast(_geom()),
+                        func.ST_Force2D(Track.route_geometry).cast(GEOGRAPHY), cfg.corridor_width_m
+                    ).cast(GEOMETRY),
                     0.00003,
                 ),
                 6,
             )
         ).where(Track.id == root.id)
     ).scalar_one_or_none()
-    ref = _root_ref(db, root.id)
+    ref = root_ref(db, root.id)
     assert ref is not None
     dev = result.deviation
     return CheckResponse(
@@ -174,18 +175,6 @@ def check_run(
         corridor=json.loads(corridor_raw) if corridor_raw else None,
         track_line=tracks_repo.geojson(db, mine.id, "full_display_geometry"),  # type: ignore[arg-type]
     )
-
-
-def _geog() -> Any:
-    from geoalchemy2 import Geography
-
-    return Geography(srid=4326)
-
-
-def _geom() -> Any:
-    from geoalchemy2 import Geometry
-
-    return Geometry(srid=4326)
 
 
 class ResultAchievement(BaseModel):
@@ -220,7 +209,7 @@ def read_result(track_id: uuid.UUID, user: CurrentUser, db: DbDep) -> ResultResp
     root = db.get(Track, track.parent_track_id)
     assert root is not None
     group = read_group(root.id, db, user)
-    ref = _root_ref(db, root.id)
+    ref = root_ref(db, root.id)
     assert ref is not None
     mine = next((r for r in group.rows if r.is_viewer), None)
     tie = float(get_setting(db, "comparison.tie_threshold_s"))
