@@ -15,6 +15,7 @@ def main(argv: list[str], database_url: str | None = None) -> int:
     with open_session(database_url) as session:
         try:
             user = set_role_by_email(session, email, role)
+            session.commit()
         except LookupError:
             print(f"Пользователь {email} не найден", file=sys.stderr)
             return 1

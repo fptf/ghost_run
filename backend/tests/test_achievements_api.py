@@ -153,6 +153,7 @@ def test_fraud_hidden(client: TestClient, db: Session) -> None:
     attempt = published(client, runner, gpx(fixture_points(ROOT), where, scale=0.9, jitter_m=2))
     assert achievements_of(db, attempt["id"]) == 1
     hide_by_moderator(db, db.get(Track, uuid.UUID(attempt["id"])))  # type: ignore[arg-type]
+    db.commit()
     assert achievements_of(db, attempt["id"]) == 0
     runner_id = client.get("/me", headers=runner).json()["id"]
     assert client.get(f"/users/{runner_id}/achievements", headers=runner).json() == []

@@ -122,6 +122,7 @@ def test_root_hidden_by_moderator(client: TestClient, db: Session) -> None:
     first = published(client, b, gpx(fixture_points(SAME), where))
     second = published(client, c, gpx(fixture_points(ROOT), where, scale=1.02, jitter_m=2))
     hide_by_moderator(db, db.get(Track, uuid.UUID(root["id"])))  # type: ignore[arg-type]
+    db.commit()
 
     g = group(client, second["id"])
     assert g["root"]["id"] == first["id"]

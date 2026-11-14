@@ -54,7 +54,6 @@ def recalc(db: Session) -> int:
         if ids
         else delete(PopularityScore).where(PopularityScore.period == PERIOD_ALL)
     )
-    db.commit()
     return len(ids)
 
 

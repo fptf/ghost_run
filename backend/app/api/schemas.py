@@ -4,7 +4,6 @@ import uuid
 from typing import Literal, Self
 
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 from app.infra.models import Achievement, Track, User
 
@@ -42,14 +41,6 @@ class RootRef(BaseModel):
     author: Author
 
 
-def root_ref(db: Session, root_id: uuid.UUID) -> RootRef | None:
+def root_ref(root: Track, user: User) -> RootRef:
     """Ссылка на маршрут (исходный трек) с автором."""
-    root = db.get(Track, root_id)
-    user = db.get(User, root.user_id) if root else None
-    if root is None or user is None:
-        return None
-    return RootRef(
-        id=root.id,
-        title=root.title,
-        author=author_of(user),
-    )
+    return RootRef(id=root.id, title=root.title, author=author_of(user))

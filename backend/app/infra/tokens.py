@@ -86,14 +86,12 @@ def rotate_refresh_token(session: Session, raw: str, cfg: Config) -> Rotation:
     if token is None:
         raise InvalidTokenError("unknown refresh token")
     if token.used_at is not None or token.revoked_at is not None:
-        _revoke_family(session, token.family_id)
-        session.commit()
+        _revoke_family(session, token.family_id)  # вызывающий фиксирует отзыв и при ошибке
         raise InvalidTokenError("refresh token reuse")
     if token.expires_at <= _now():
         raise InvalidTokenError("refresh token expired")
     token.used_at = _now()
     new_raw = issue_refresh_token(session, token.user_id, cfg, family_id=token.family_id)
-    session.commit()
     return Rotation(user_id=token.user_id, refresh_token=new_raw)
 
 
@@ -103,4 +101,3 @@ def revoke_refresh_token(session: Session, raw: str) -> None:
     ).scalar_one_or_none()
     if token is not None:
         _revoke_family(session, token.family_id)
-        session.commit()

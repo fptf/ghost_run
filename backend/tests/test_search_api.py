@@ -215,6 +215,7 @@ def test_sort_by_distance_and_popularity(client: TestClient, db: Session) -> Non
         "items"]] == [short["id"], long["id"]]  # fmt: skip
     client.get(f"/tracks/{long['id']}/gpx")  # скачивание поднимает популярность
     recalc(db)  # популярность — из почасового пересчёта (add-ratings)
+    db.commit()
     popular = search(client, bbox=bbox(center), zoom=14, sort="popular")["items"]
     assert popular[0]["id"] == long["id"]
 

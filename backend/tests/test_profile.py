@@ -90,6 +90,7 @@ def test_radius_bounds_come_from_settings(client: TestClient, db: Session) -> No
 
     original = get_setting(db, "privacy.hide_radius_m")
     set_setting(db, "privacy.hide_radius_m", {"min": 100, "max": 500})
+    db.commit()
     try:
         headers = dev_login(client)
         resp = client.patch(
@@ -98,6 +99,7 @@ def test_radius_bounds_come_from_settings(client: TestClient, db: Session) -> No
         assert resp.status_code == 200
     finally:
         set_setting(db, "privacy.hide_radius_m", original)
+        db.commit()
 
 
 def test_home_requires_radius(client: TestClient) -> None:

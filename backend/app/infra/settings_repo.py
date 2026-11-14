@@ -24,7 +24,6 @@ def get_setting(session: Session, key: str) -> Any:
 
 def set_setting(session: Session, key: str, value: Any) -> None:
     session.merge(Setting(key=key, value=value))
-    session.commit()
 
 
 def all_settings(session: Session) -> dict[str, Any]:

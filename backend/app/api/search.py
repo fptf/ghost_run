@@ -173,6 +173,7 @@ def download_gpx(track_id: uuid.UUID, db: DbDep, viewer: OptionalUser) -> Respon
         raise HTTPException(status.HTTP_404_NOT_FOUND, "У трека нет видимой части")
     title = track.title or "Маршрут"
     search_repo.record_download(db, track.id, viewer.id if viewer else None)
+    db.commit()
     ascii_name = f"route-{str(track.id)[:8]}.gpx"
     disposition = (
         f"attachment; filename={quoteattr(ascii_name)}; filename*=UTF-8''{quote(title)}.gpx"

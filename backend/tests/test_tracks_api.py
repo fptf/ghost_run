@@ -392,10 +392,12 @@ def test_delete_account_with_tracks(client: TestClient, migrated: Config, db: Se
 def test_category_bounds_from_settings(client: TestClient, db: Session) -> None:
     original = get_setting(db, "categories.bounds_m")
     set_setting(db, "categories.bounds_m", [6000, 7500, 15000, 25000])
+    db.commit()
     try:
         owner = dev_login(client)
         track = uploaded(client, owner, unique_run(5200))
         assert track["category"] == "1"
     finally:
         set_setting(db, "categories.bounds_m", original)
+        db.commit()
     assert math.isclose(track["distance_m"], 5200, rel_tol=0.01)

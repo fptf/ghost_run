@@ -1,20 +1,18 @@
-import json
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DbDep, OptionalUser
 from app.api.schemas import AchievementFields, Author, LineGeometry, RootRef, author_of, root_ref
 from app.domain.matching import Outcome, compare, verdict
 from app.infra import tracks_repo
 from app.infra.achievements_service import track_achievements
-from app.infra.geo_types import GEOGRAPHY, GEOMETRY
 from app.infra.matching_service import (
     attempt_row,
+    corridor_geojson,
     evaluate,
     group_rows,
     load_config,
@@ -79,8 +77,6 @@ def mark_group_seen(track_id: uuid.UUID, db: DbDep, user: CurrentUser) -> None:
 
 
 def _group(db: DbDep, root: Track, viewer: User | None) -> GroupResponse:
-    ref = root_ref(db, root.id)
-    assert ref is not None
     distance = root.distance_m or 1.0
     rows = [
         GroupRow(
@@ -99,7 +95,7 @@ def _group(db: DbDep, root: Track, viewer: User | None) -> GroupResponse:
         for r in group_rows(db, root)
     ]
     return GroupResponse(
-        root=ref,
+        root=root_ref(root, tracks_repo.author(db, root)),
         root_distance_m=distance,
         runners=len(rows),
         rows=rows,
@@ -171,25 +167,10 @@ def check_run(
                   required=cfg.length_tolerance),
     ]  # fmt: skip
     cmp = compare(result.result_time_s, root.total_time_s or 0, cfg.tie_threshold_s)
-    corridor_raw = db.execute(
-        select(
-            func.ST_AsGeoJSON(
-                func.ST_Simplify(
-                    func.ST_Buffer(
-                        func.ST_Force2D(Track.route_geometry).cast(GEOGRAPHY), cfg.corridor_width_m
-                    ).cast(GEOMETRY),
-                    0.00003,
-                ),
-                6,
-            )
-        ).where(Track.id == root.id)
-    ).scalar_one_or_none()
-    ref = root_ref(db, root.id)
-    assert ref is not None
     dev = result.deviation
     return CheckResponse(
         matched=result.matched,
-        route=ref,
+        route=root_ref(root, tracks_repo.author(db, root)),
         track_id=mine.id,
         track_title=mine.title,
         track_started_at=mine.started_at,
@@ -198,7 +179,7 @@ def check_run(
         result_time_s=result.result_time_s if result.matched else None,
         diff_s=cmp.diff_s if result.matched else None,
         route_line=tracks_repo.geojson(db, root.id, "display_geometry"),  # type: ignore[arg-type]
-        corridor=json.loads(corridor_raw) if corridor_raw else None,
+        corridor=corridor_geojson(db, root.id, cfg.corridor_width_m),
         track_line=tracks_repo.geojson(db, mine.id, "full_display_geometry"),  # type: ignore[arg-type]
     )
 
@@ -233,13 +214,11 @@ def read_result(track_id: uuid.UUID, user: CurrentUser, db: DbDep) -> ResultResp
     root = db.get(Track, track.parent_track_id)
     assert root is not None
     group = _group(db, root, user)
-    ref = root_ref(db, root.id)
-    assert ref is not None
     mine = next((r for r in group.rows if r.is_viewer), None)
     best = group.rows[0].time_s if group.rows else attempt.result_time_s
     return ResultResponse(
         outcome=verdict(attempt.diff_s, tie_threshold_s(db)).outcome,
-        route=ref,
+        route=group.root,
         result_time_s=attempt.result_time_s,
         root_time_s=root.total_time_s or 0,
         diff_s=attempt.diff_s,

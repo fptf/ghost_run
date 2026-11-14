@@ -43,6 +43,7 @@ def test_score_formula() -> None:
 def test_score_calculation(client: TestClient, db: Session) -> None:
     root = group_of_four(client, downloads=3)
     recalc(db)
+    db.commit()
     e = entry(client, "5", root["id"])
     assert e is not None
     assert (e["runners"], e["downloads"], e["value"]) == (4, 3, 26)
@@ -52,12 +53,16 @@ def test_weights_from_settings(client: TestClient, db: Session) -> None:
     root = group_of_four(client, downloads=3)
     original = get_setting(db, "popularity.weights")
     set_setting(db, "popularity.weights", {"runners": 5, "downloads": 3, "likes": 1})
+    db.commit()
     try:
         recalc(db)
+        db.commit()
         assert entry(client, "5", root["id"])["value"] == 29  # type: ignore[index]
     finally:
         set_setting(db, "popularity.weights", original)
+        db.commit()
         recalc(db)
+        db.commit()
 
 
 # --- Category Ratings ------------------------------------------------------------------------
@@ -67,6 +72,7 @@ def test_category_tab(client: TestClient, db: Session) -> None:
     five = group_of_four(client, downloads=0)  # 5 км (по фикстуре ~4,4 км)
     ten = published(client, dev_login(client), gpx(fixture_points("20260617"), place()))
     recalc(db)
+    db.commit()
     tab = client.get("/ratings", params={"category": "10", "limit": 100}).json()
     assert ten["id"] in {i["track_id"] for i in tab}
     assert five["id"] not in {i["track_id"] for i in tab}
@@ -85,6 +91,7 @@ def test_attempts_and_private_excluded(client: TestClient, db: Session) -> None:
     published(client, dev_login(client), gpx(fixture_points(SAME), (where[0] + 1, where[1])))
     client.delete(f"/tracks/{gone_root['id']}", headers=gone_author)  # мягкое удаление
     recalc(db)
+    db.commit()
     assert entry(client, "5", root["id"]) is not None
     for excluded in (attempt, private, gone_root):
         assert entry(client, "5", excluded["id"]) is None
@@ -97,12 +104,14 @@ def test_new_attempt_after_recalc(client: TestClient, db: Session) -> None:
     where = place()
     root = published(client, dev_login(client), gpx(fixture_points("20260617"), where))
     recalc(db)
+    db.commit()
     before = entry(client, "10", root["id"])["value"]  # type: ignore[index]
     published(
         client, dev_login(client), gpx(fixture_points("20260617"), where, scale=0.98, jitter_m=2)
     )
     assert entry(client, "10", root["id"])["value"] == before  # до пересчёта — прежнее
     recalc(db)
+    db.commit()
     assert entry(client, "10", root["id"])["value"] == before + 5
 
 
@@ -133,6 +142,7 @@ def test_sort_by_stored_popularity(client: TestClient, db: Session) -> None:
             client, dev_login(client), gpx(fixture_points(ROOT), where, scale=scale, jitter_m=2)
         )
     recalc(db)
+    db.commit()
     lons = [c[0] for t in (quiet, busy) for c in t["geometry"]["coordinates"]]
     lats = [c[1] for t in (quiet, busy) for c in t["geometry"]["coordinates"]]
     bbox = f"{min(lons) - 0.01},{min(lats) - 0.01},{max(lons) + 0.01},{max(lats) + 0.01}"

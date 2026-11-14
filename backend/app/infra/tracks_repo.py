@@ -12,6 +12,7 @@ from app.infra.models import (
     TrackPhoto,
     TrackSplit,
     TrackStatus,
+    User,
     Visibility,
 )
 
@@ -106,6 +107,21 @@ def stats(db: Session, user_id: uuid.UUID, public_only: bool) -> dict[str, Any]:
         "total_distance_m": int(round(float(total))),
         "records": {k: int(round(v)) for k, v in records.items()},
     }
+
+
+def with_author(db: Session, track_id: uuid.UUID) -> tuple[Track, User] | None:
+    """Трек и его автор; None, если трека нет."""
+    track = db.get(Track, track_id)
+    user = db.get(User, track.user_id) if track else None
+    if track is None or user is None:
+        return None
+    return track, user
+
+
+def author(db: Session, track: Track) -> User:
+    user = db.get(User, track.user_id)
+    assert user is not None  # user_id — внешний ключ с каскадным удалением
+    return user
 
 
 def geojson(db: Session, track_id: uuid.UUID, column: str) -> dict[str, Any] | None:

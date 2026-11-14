@@ -189,7 +189,6 @@ def km_marks(db: Session, track: Track) -> list[dict[str, float]]:
 
 def record_download(db: Session, track_id: uuid.UUID, user_id: uuid.UUID | None) -> None:
     db.add(TrackDownload(track_id=track_id, user_id=user_id))
-    db.commit()
 
 
 def gpx_coords(db: Session, track_id: uuid.UUID) -> list[list[float]]:

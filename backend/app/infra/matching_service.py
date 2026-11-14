@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.matching import AttemptLine, MatchConfig, MatchResult, Route, compare, match
 from app.infra.achievements_service import sync_achievements
+from app.infra.geo_types import GEOGRAPHY, GEOMETRY
 from app.infra.models import Attempt, AttemptState, Track, User
 from app.infra.settings_repo import get_setting
 from app.infra.tracks_repo import is_listed_public, public_root
@@ -68,6 +69,24 @@ def attempt_of(db: Session, track: Track) -> AttemptLine | None:
     if len(rows) < 2:
         return None
     return AttemptLine(points=[(float(x), float(y), float(m)) for x, y, m in rows])
+
+
+def corridor_geojson(db: Session, root_id: uuid.UUID, width_m: float) -> dict[str, Any] | None:
+    """Коридор вокруг маршрута (GeoJSON-полигон, упрощённый для карты)."""
+    raw = db.execute(
+        select(
+            func.ST_AsGeoJSON(
+                func.ST_Simplify(
+                    func.ST_Buffer(
+                        func.ST_Force2D(Track.route_geometry).cast(GEOGRAPHY), width_m
+                    ).cast(GEOMETRY),
+                    0.00003,
+                ),
+                6,
+            )
+        ).where(Track.id == root_id)
+    ).scalar_one_or_none()
+    return json.loads(raw) if raw else None
 
 
 # ---------- Кандидаты и лучшее совпадение ----------
@@ -272,7 +291,6 @@ def hide_by_moderator(db: Session, track: Track) -> None:
     else:
         _leave_group(db, track, AttemptState.detached)
     sync_achievements(db, track)
-    db.commit()
 
 
 def before_account_deletion(db: Session, user_id: uuid.UUID) -> None:

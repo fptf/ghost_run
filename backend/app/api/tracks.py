@@ -173,8 +173,7 @@ def _summary(track: Track) -> TrackSummary:
 
 
 def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
-    user = db.get(User, track.user_id)
-    assert user is not None
+    user = tracks_repo.author(db, track)
     is_owner = viewer is not None and viewer.id == track.user_id
     owner = None
     if is_owner:
@@ -208,7 +207,7 @@ def _detail(db: DbDep, track: Track, viewer: User | None) -> TrackDetail:
         owner=owner,
         km_marks=[KmMark.model_validate(m) for m in km_marks(db, track)],
         match=_match_info(db, track) if is_owner else None,
-        attempt_of=root_ref(db, track.parent_track_id) if track.parent_track_id else None,
+        attempt_of=_root_ref(db, track.parent_track_id) if track.parent_track_id else None,
         group_runners=(
             tracks_repo.runners_count(db, root_of(db, track).id)
             if track.status == TrackStatus.published.value
@@ -222,7 +221,7 @@ def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
     attempt = attempt_row(db, track.id)
     if attempt is None:
         return None
-    ref = root_ref(db, attempt.root_track_id)
+    ref = _root_ref(db, attempt.root_track_id)
     if ref is None:
         return None
     return MatchInfo(
@@ -237,6 +236,11 @@ def _match_info(db: DbDep, track: Track) -> MatchInfo | None:
         segment_distance_m=attempt.segment_distance_m,
         hidden_time_s=attempt.hidden_time_s,
     )
+
+
+def _root_ref(db: DbDep, root_id: uuid.UUID) -> RootRef | None:
+    found = tracks_repo.with_author(db, root_id)
+    return root_ref(*found) if found else None
 
 
 def _own_track(db: DbDep, track_id: uuid.UUID, user: User) -> Track:
