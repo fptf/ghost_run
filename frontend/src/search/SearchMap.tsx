@@ -1,4 +1,5 @@
 import type { GeoJSONSource, MapLayerMouseEvent } from "maplibre-gl";
+import type { TFunction } from "i18next";
 import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
@@ -67,6 +68,34 @@ function fitPadding(map: DOMRect, overlays: (HTMLElement | null)[]) {
   };
 }
 
+interface Selection {
+  lines: MapLine[];
+  selectedId: string | null;
+  selectedLine: number[][] | null;
+  t: TFunction;
+}
+
+/** Выделяет выбранный трек и ставит маркеры старта и финиша (endMarkers меняется на месте). */
+function drawSelected(map: MapLibreMap, sel: Selection, endMarkers: Marker[]) {
+  const { lines, selectedId, selectedLine, t } = sel;
+  const line = selectedLine ?? lines.find((l) => l.id === selectedId)?.coordinates ?? null;
+  const data = selectedId && line ? [{ id: selectedId, coordinates: line }] : [];
+  (map.getSource("selected") as GeoJSONSource | undefined)?.setData(collection(data));
+  endMarkers.splice(0).forEach((m) => m.remove());
+  if (line && line.length > 1) {
+    const first = line[0] as [number, number];
+    const last = line[line.length - 1] as [number, number];
+    endMarkers.push(
+      new Marker({ element: markerEl("end-mark end-mark--start", "", t("map.start")) })
+        .setLngLat(first)
+        .addTo(map),
+      new Marker({ element: markerEl("end-mark end-mark--finish", "", t("map.finish")) })
+        .setLngLat(last)
+        .addTo(map),
+    );
+  }
+}
+
 function collection(lines: MapLine[]) {
   return {
     type: "FeatureCollection" as const,
@@ -98,10 +127,10 @@ export function SearchMap({
   const clusterMarkers = useRef<Marker[]>([]);
   const endMarkers = useRef<Marker[]>([]);
   const handlers = useRef({ onViewChange, onSelect, overlays });
-  const latest = useRef({ lines });
+  const latest = useRef<Selection>({ lines, selectedId, selectedLine, t });
   useEffect(() => {
     handlers.current = { onViewChange, onSelect, overlays };
-    latest.current = { lines };
+    latest.current = { lines, selectedId, selectedLine, t };
   });
 
   // Карта создаётся один раз; дальше меняются только данные.
@@ -173,6 +202,8 @@ export function SearchMap({
       map.on("mouseleave", "lines-hit", () => (map.getCanvas().style.cursor = ""));
       ready.current = true;
       el.dataset.ready = "true";
+      // данные трека часто приходят из кеша раньше, чем карта готова
+      drawSelected(map, latest.current, endMarkers.current);
       emit();
     });
     map.on("moveend", emit);
@@ -215,27 +246,10 @@ export function SearchMap({
     });
   }, [clusters, t]);
 
-  // Выбранный трек: выделение, старт и финиш.
+  // Выбранный трек: выделение, старт и финиш (повторно рисуется и при загрузке стиля).
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready.current) return;
-    const line = selectedLine ?? lines.find((l) => l.id === selectedId)?.coordinates ?? null;
-    const data = selectedId && line ? [{ id: selectedId, coordinates: line }] : [];
-    (map.getSource("selected") as GeoJSONSource | undefined)?.setData(collection(data));
-    endMarkers.current.forEach((m) => m.remove());
-    endMarkers.current = [];
-    if (line && line.length > 1) {
-      const first = line[0] as [number, number];
-      const last = line[line.length - 1] as [number, number];
-      endMarkers.current = [
-        new Marker({ element: markerEl("end-mark end-mark--start", "", t("map.start")) })
-          .setLngLat(first)
-          .addTo(map),
-        new Marker({ element: markerEl("end-mark end-mark--finish", "", t("map.finish")) })
-          .setLngLat(last)
-          .addTo(map),
-      ];
-    }
+    if (map && ready.current) drawSelected(map, latest.current, endMarkers.current);
   }, [selectedId, selectedLine, lines, t]);
 
   // «Показать на карте»: подогнать карту под трек.
