@@ -1,10 +1,8 @@
 """Spec track-upload через API: загрузка, обработка, приватность, видимость, фото, профиль."""
 
 import io
-import itertools
 import math
 import uuid
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,48 +14,18 @@ from app.config import Config
 from app.infra.models import Track
 from app.infra.s3 import s3_client
 from app.infra.settings_repo import get_setting, set_setting
-from tests.conftest import dev_login
 from tests.gpx_factory import ORIGIN, circle, offset, straight, to_gpx
-from tests.test_track_domain import _jpeg_with_gps, haversine
-
-FIXTURES = Path(__file__).parent / "fixtures" / "tracks"
-Headers = dict[str, str]
-
-
-def upload(client: TestClient, headers: Headers, data: bytes, name: str = "run.gpx"):
-    return client.post("/tracks", headers=headers, files={"file": (name, data)})
-
-
-def uploaded(client: TestClient, headers: Headers, data: bytes, name: str = "run.gpx") -> dict:
-    resp = upload(client, headers, data, name)
-    assert resp.status_code == 202, resp.text
-    track = client.get(f"/tracks/{resp.json()['id']}", headers=headers).json()
-    return track  # type: ignore[no-any-return]
-
-
-_RUN_SEQ = itertools.count(uuid.uuid4().int % 20_000)
-
-
-def unique_run(distance: float = 3000, **kw) -> bytes:  # type: ignore[no-untyped-def]
-    """Каждый вызов — новый файл (сдвиг старта), чтобы не срабатывала защита от дубликатов."""
-    shift = next(_RUN_SEQ) % 20_000  # по счётчику: случайный сдвиг изредка совпадал
-    return to_gpx(straight(distance, start=offset(*ORIGIN, shift, 0), **kw))
-
-
-def publish(client: TestClient, headers: Headers, track_id: str, visibility: str) -> None:
-    resp = client.patch(
-        f"/tracks/{track_id}", headers=headers, json={"visibility": visibility, "publish": True}
-    )
-    assert resp.status_code == 200, resp.text
-
-
-def set_home(client: TestClient, headers: Headers, home: tuple[float, float], radius: int) -> None:
-    resp = client.patch(
-        "/me",
-        headers=headers,
-        json={"home": {"lat": home[0], "lon": home[1]}, "hide_radius_m": radius},
-    )
-    assert resp.status_code == 200, resp.text
+from tests.helpers import (
+    FIXTURES,
+    dev_login,
+    haversine,
+    jpeg_with_gps,
+    publish,
+    set_home,
+    unique_run,
+    upload,
+    uploaded,
+)
 
 
 def s3_keys(cfg: Config, prefix: str) -> list[str]:
@@ -342,7 +310,7 @@ def test_photo_location_stripped(client: TestClient) -> None:
     owner, other = dev_login(client), dev_login(client)
     track = uploaded(client, owner, unique_run())
     photo = client.post(
-        f"/tracks/{track['id']}/photos", headers=owner, files={"file": ("p.jpg", _jpeg_with_gps())}
+        f"/tracks/{track['id']}/photos", headers=owner, files={"file": ("p.jpg", jpeg_with_gps())}
     ).json()
     publish(client, owner, track["id"], "public")
 

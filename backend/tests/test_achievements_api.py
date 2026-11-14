@@ -8,9 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.infra.matching_service import hide_by_moderator, sync_group
 from app.infra.models import Track, UserAchievement
-from tests.conftest import dev_login
-from tests.test_matching_api import ROOT, SAME, fixture_points, gpx, place, published
-from tests.test_tracks_api import uploaded
+from tests.helpers import ROOT, SAME, dev_login, fixture_points, gpx, place, published, uploaded
 
 
 def achievements_of(db: Session, track_id: str) -> int:

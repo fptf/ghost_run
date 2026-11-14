@@ -1,7 +1,6 @@
 """Правила 5.1/5.2 на реальных (обезличенных) пробежках и производных от них случаях."""
 
 import math
-from pathlib import Path
 
 import pytest
 
@@ -9,19 +8,10 @@ from app.domain.matching import AttemptLine, MatchConfig, Route, compare, match
 from app.domain.tracks.metrics import MetricsConfig
 from app.domain.tracks.model import FileFormat
 from app.domain.tracks.pipeline import GeometryConfig, ProcessedTrack, process
-from tests.gpx_factory import offset, straight, to_gpx
+from tests.gpx_factory import straight, to_gpx
+from tests.helpers import fx, path_before
 
-FIXTURES = Path(__file__).parent / "fixtures" / "tracks"
 CFG = MatchConfig()
-_cache: dict[str, ProcessedTrack] = {}
-
-
-def fx(date: str, home: tuple[float, float] | None = None, radius: float | None = None):
-    key = f"{date}:{home}:{radius}"
-    if key not in _cache:
-        data = (FIXTURES / f"run_{date}.gpx").read_bytes()
-        _cache[key] = process(data, FileFormat.gpx, home, radius, MetricsConfig(), GeometryConfig())
-    return _cache[key]
 
 
 def route(p: ProcessedTrack) -> Route:
@@ -46,14 +36,6 @@ def run(points: list[tuple[float, float, float]]) -> AttemptLine:
 def scaled(points, k: float):  # type: ignore[no-untyped-def]
     """Тот же путь, темп в k раз медленнее."""
     return [(x, y, t * k) for x, y, t in points]
-
-
-def path_before(start_lonlat: tuple[float, float], meters: float, pace: float = 330):
-    """Разминка: прямой отрезок, заканчивающийся в точке старта (без времени)."""
-    lon, lat = start_lonlat
-    pts = straight(meters, pace_s_per_km=pace, start=offset(lat, lon, -meters, 0), bearing_deg=90)
-    t0 = pts[0].t
-    return [(p.lon, p.lat, (p.t - t0).total_seconds()) for p in pts]  # type: ignore[operator]
 
 
 # --- Real series match (Automatic Matching) ---------------------------------------------------

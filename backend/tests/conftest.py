@@ -98,14 +98,6 @@ def client(migrated: Config) -> Iterator[TestClient]:
     app.dependency_overrides.clear()
 
 
-def dev_login(client: TestClient, email: str | None = None, name: str = "Бегун") -> dict[str, str]:
-    """Входит через dev-вход и возвращает заголовок авторизации."""
-    email = email or f"{uuid.uuid4().hex[:10]}@example.com"
-    resp = client.post("/auth/dev-login", json={"email": email, "name": name})
-    assert resp.status_code == 200, resp.text
-    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
-
-
 class InlineQueue:
     """Выполняет фоновые задачи сразу, в том же процессе."""
 

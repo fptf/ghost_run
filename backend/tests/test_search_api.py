@@ -11,10 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.infra.models import Track, TrackDownload
 from app.infra.ratings_service import recalc
-from tests.conftest import dev_login
 from tests.gpx_factory import GEOD, offset, straight, to_gpx
-from tests.test_track_domain import haversine
-from tests.test_tracks_api import Headers, publish, set_home, uploaded
+from tests.helpers import Headers, dev_login, haversine, publish, set_home, uploaded
 
 
 def area() -> tuple[float, float]:

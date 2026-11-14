@@ -11,7 +11,7 @@ from app.domain.privacy import RadiusBounds, RadiusOutOfRangeError, validate_hid
 from app.infra.account_cleanup import user_s3_prefix
 from app.infra.models import RefreshToken, User
 from app.infra.s3 import s3_client
-from tests.conftest import dev_login
+from tests.helpers import dev_login
 
 PUBLIC_KEYS = {"id", "name", "avatar_url", "city", "about", "stats"}
 

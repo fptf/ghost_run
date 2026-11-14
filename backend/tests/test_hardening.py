@@ -12,8 +12,7 @@ from app.config import Config
 from app.domain.tracks.privacy import JITTER_SHARE, visible_range
 from app.infra.models import Track, TrackStatus
 from app.infra.track_processing import GIVE_UP_AFTER, STUCK_AFTER, requeue_stuck
-from tests.conftest import dev_login
-from tests.test_tracks_api import unique_run, upload
+from tests.helpers import dev_login, unique_run, upload
 
 
 def test_invalid_refresh_clears_cookie(client: TestClient) -> None:

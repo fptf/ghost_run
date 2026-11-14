@@ -15,19 +15,9 @@ from app.domain.tracks.parsers import detect_format, parse
 from app.domain.tracks.pipeline import GeometryConfig, process
 from app.infra.photos import sanitize
 from tests.gpx_factory import ORIGIN, circle, offset, straight, to_gpx
+from tests.helpers import FIXTURES, haversine, jpeg_with_gps
 
-FIXTURES = Path(__file__).parent / "fixtures" / "tracks"
 MC, GC = MetricsConfig(), GeometryConfig()
-
-
-def haversine(a: tuple[float, float], b: tuple[float, float]) -> float:
-    r = 6371008.8
-    la1, lo1, la2, lo2 = map(math.radians, (*a, *b))
-    h = (
-        math.sin((la2 - la1) / 2) ** 2
-        + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
-    )
-    return 2 * r * math.asin(math.sqrt(h))
 
 
 def run(data: bytes, home: tuple[float, float] | None = None, radius: float | None = None):
@@ -193,18 +183,8 @@ def test_track_entirely_inside_zone() -> None:
 # --- Photos ------------------------------------------------------------------------
 
 
-def _jpeg_with_gps() -> bytes:
-    img = Image.new("RGB", (3000, 2000), (200, 80, 20))
-    exif = Image.Exif()
-    exif[0x8825] = {1: "N", 2: (55.0, 45.0, 0.0), 3: "E", 4: (37.0, 37.0, 0.0)}  # GPSInfo
-    exif[0x010F] = "PhoneMaker"
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", exif=exif)
-    return buf.getvalue()
-
-
 def test_photo_location_stripped() -> None:
-    original = _jpeg_with_gps()
+    original = jpeg_with_gps()
     assert Image.open(io.BytesIO(original)).getexif().get_ifd(0x8825)
     clean, content_type, ext = sanitize(original)
     img = Image.open(io.BytesIO(clean))

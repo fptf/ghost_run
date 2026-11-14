@@ -11,8 +11,7 @@ from app.domain.ratings import Weights, popularity
 from app.infra import tasks
 from app.infra.ratings_service import recalc
 from app.infra.settings_repo import get_setting, set_setting
-from tests.conftest import dev_login
-from tests.test_matching_api import ROOT, SAME, fixture_points, gpx, place, published
+from tests.helpers import ROOT, SAME, dev_login, fixture_points, gpx, place, published
 
 
 def entry(client: TestClient, category: str, track_id: str) -> dict[str, Any] | None:
