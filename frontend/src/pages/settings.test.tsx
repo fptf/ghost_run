@@ -54,4 +54,29 @@ describe("Настройки профиля", () => {
     expect(await screen.findByRole("heading", { name: "Анна" })).toBeInTheDocument();
     expect(calls).not.toContain("PATCH /me");
   });
+
+  it("ошибка сохранения показывается, форма остаётся", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": () => json(ME),
+      "PATCH /me": () => json({ detail: "Слишком длинное имя" }, 400),
+    });
+    renderApp("/settings");
+    fireEvent.click(await screen.findByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Слишком длинное имя");
+    expect(screen.getByLabelText("Город")).toBeInTheDocument();
+  });
+
+  it("неудачное удаление аккаунта сообщает об ошибке и не выходит", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": () => json(ME),
+      "DELETE /me": () => new Response(null, { status: 500 }),
+    });
+    renderApp("/settings");
+    fireEvent.click(await screen.findByRole("button", { name: "Удалить аккаунт" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, удалить навсегда" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось удалить аккаунт");
+    expect(tokenStore.get()).toBe("t");
+  });
 });

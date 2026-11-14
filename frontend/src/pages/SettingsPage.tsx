@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { api } from "../api/client";
-import { errorDetail } from "../api/errors";
+import { errorDetail, NETWORK_FAILURE } from "../api/errors";
 import type { Schemas } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { BackButton } from "../components/BackButton";
@@ -29,19 +29,23 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
   const [radius, setRadius] = useState(String(me.hide_radius_m ?? 300));
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
     const hasHome = lat.trim() !== "" && lon.trim() !== "";
-    const { data, error: err } = await api.PATCH("/me", {
-      body: {
-        name,
-        city,
-        about,
-        home: hasHome ? { lat: Number(lat), lon: Number(lon) } : null,
-        ...(hasHome ? { hide_radius_m: Number(radius) } : {}),
-      },
-    });
+    setError(null);
+    const { data, error: err } = await api
+      .PATCH("/me", {
+        body: {
+          name,
+          city,
+          about,
+          home: hasHome ? { lat: Number(lat), lon: Number(lon) } : null,
+          ...(hasHome ? { hide_radius_m: Number(radius) } : {}),
+        },
+      })
+      .catch(() => NETWORK_FAILURE);
     if (data) {
       queryClient.setQueryData(["me"], data);
       void queryClient.invalidateQueries({ queryKey: MY_TRACKS_KEY });
@@ -60,11 +64,14 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
   }
 
   async function onDelete() {
-    const { response } = await api.DELETE("/me");
-    if (response.ok) {
-      forget();
-      navigate("/", { replace: true });
+    setDeleteFailed(false);
+    const { response } = await api.DELETE("/me").catch(() => NETWORK_FAILURE);
+    if (!response?.ok) {
+      setDeleteFailed(true);
+      return;
     }
+    forget();
+    navigate("/", { replace: true });
   }
 
   return (
@@ -172,6 +179,11 @@ function SettingsForm({ me }: { me: Schemas["OwnProfile"] }) {
         ) : (
           <>
             <p className="notice notice--error">{t("settings.deleteWarning")}</p>
+            {deleteFailed && (
+              <p role="alert" className="notice notice--error">
+                {t("settings.deleteFailed")}
+              </p>
+            )}
             <div className="row">
               <button type="button" className="btn btn--danger btn--sm" onClick={onDelete}>
                 {t("settings.deleteConfirm")}

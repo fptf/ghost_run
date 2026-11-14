@@ -242,6 +242,65 @@ describe("Превью", () => {
   });
 });
 
+describe("Ошибки на форме трека", () => {
+  const PHOTO_ID = "33333333-3333-3333-3333-333333333333";
+
+  it("сохранение с ошибкой оставляет форму и показывает причину", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": ME,
+      [`GET /tracks/${TRACK_ID}`]: () => json(track()),
+      [`PATCH /tracks/${TRACK_ID}`]: () => json({ detail: "Название занято" }, 400),
+    });
+    renderApp(`/tracks/${TRACK_ID}/edit`);
+    fireEvent.click(await screen.findByRole("button", { name: "Опубликовать" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Название занято");
+    expect(screen.getByLabelText("Название")).toBeInTheDocument();
+  });
+
+  it("сбой загрузки и удаления фото показывается ошибкой", async () => {
+    mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": ME,
+      [`GET /tracks/${TRACK_ID}`]: () => json(track({ photos: [{ id: PHOTO_ID }] })),
+      [`POST /tracks/${TRACK_ID}/photos`]: () => json({ detail: "Слишком большое фото" }, 413),
+      [`DELETE /tracks/${TRACK_ID}/photos/${PHOTO_ID}`]: () => json({ detail: "boom" }, 500),
+    });
+    renderApp(`/tracks/${TRACK_ID}/edit`);
+    const input = await screen.findByLabelText("+ Фото, до 5");
+    fireEvent.change(input, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Слишком большое фото");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req = input instanceof Request ? input : new Request(input, init);
+        if (req.method === "DELETE") return new Response(null, { status: 500 });
+        return json(track({ photos: [{ id: PHOTO_ID }] }));
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
+    expect(await screen.findByText("Не удалось удалить фото")).toBeInTheDocument();
+  });
+
+  it("неудачное удаление трека не уводит со страницы", async () => {
+    const { calls } = mockApi({
+      "POST /auth/refresh": SESSION,
+      "GET /me": ME,
+      [`GET /tracks/${TRACK_ID}`]: () => json(track({ status: "published" })),
+      [`DELETE /tracks/${TRACK_ID}`]: () => new Response(null, { status: 500 }),
+    });
+    renderApp(`/tracks/${TRACK_ID}/edit`);
+    fireEvent.click(await screen.findByRole("button", { name: "Удалить трек" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, удалить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось удалить трек");
+    expect(screen.getByLabelText("Название")).toBeInTheDocument();
+    expect(calls).toContain(`DELETE /tracks/${TRACK_ID}`);
+  });
+});
+
 describe("Навигация трека", () => {
   it("с формы можно уйти кнопкой «Назад» — на просмотр трека", async () => {
     mockApi({

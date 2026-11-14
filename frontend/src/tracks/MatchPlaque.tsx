@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { api } from "../api/client";
+import { NETWORK_FAILURE } from "../api/errors";
 import { formatDuration, formatKm } from "../lib/format";
 import type { TrackDetail } from "./api";
 import { verdictText } from "./verdict";
@@ -13,6 +14,7 @@ export function MatchPlaque({ track, visibility }: { track: TrackDetail; visibil
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const m = track.match;
   if (!m) return null;
 
@@ -26,11 +28,18 @@ export function MatchPlaque({ track, visibility }: { track: TrackDetail; visibil
 
   async function onDetach() {
     setBusy(true);
-    await api.PATCH("/tracks/{track_id}", {
-      params: { path: { track_id: track.id } },
-      body: { detach: true, publish: false },
-    });
+    setFailed(false);
+    const { response } = await api
+      .PATCH("/tracks/{track_id}", {
+        params: { path: { track_id: track.id } },
+        body: { detach: true, publish: false },
+      })
+      .catch(() => NETWORK_FAILURE);
     setBusy(false);
+    if (!response?.ok) {
+      setFailed(true);
+      return;
+    }
     await queryClient.invalidateQueries({ queryKey: ["track", track.id] });
     void queryClient.invalidateQueries({ queryKey: ["group"] });
   }
@@ -58,6 +67,11 @@ export function MatchPlaque({ track, visibility }: { track: TrackDetail; visibil
       {m.hidden_time_s > 1 && (
         <p className="match-plaque__note">
           {t("match.hiddenAdded", { time: formatDuration(m.hidden_time_s) })}
+        </p>
+      )}
+      {failed && (
+        <p role="alert" className="notice notice--error">
+          {t("match.detachFailed")}
         </p>
       )}
       <button type="button" className="match-plaque__detach" disabled={busy} onClick={onDetach}>
