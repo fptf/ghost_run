@@ -31,10 +31,40 @@ export interface SearchMapProps {
   selectedLine: number[][] | null;
   /** Счётчик: при изменении карта подгоняется под выбранный трек. */
   fitKey: number;
+  /** Панели поверх карты (телефон: фильтры, выдвижной список) — трек подгоняется в свободную часть. */
+  overlays?: () => (HTMLElement | null)[];
   /** Перелёт к области (сброс, «треки рядом»); key меняется при каждом запросе. */
   flyTo: (View & { key: number }) | null;
   onViewChange: (v: Viewport) => void;
   onSelect: (id: string | null) => void;
+}
+
+const FIT_PADDING = 48;
+const MIN_FREE_PX = 160;
+
+/** Отступы для fitBounds с учётом панелей, лежащих поверх карты сверху и снизу. */
+function fitPadding(map: DOMRect, overlays: (HTMLElement | null)[]) {
+  let top = 0;
+  let bottom = 0;
+  for (const el of overlays) {
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    const overlapW = Math.min(r.right, map.right) - Math.max(r.left, map.left);
+    const overlapH = Math.min(r.bottom, map.bottom) - Math.max(r.top, map.top);
+    // боковая колонка (десктоп) карту не перекрывает — её не считаем
+    if (r.height === 0 || overlapH <= 0 || overlapW < map.width / 2) continue;
+    if (r.top + r.height / 2 < map.top + map.height / 2) top = Math.max(top, r.bottom - map.top);
+    else bottom = Math.max(bottom, map.bottom - r.top);
+  }
+  // Места мало (открыт список) — важнее не прятать трек под списком, фильтры сверху не учитываем.
+  if (map.height - top - bottom - 2 * FIT_PADDING < MIN_FREE_PX) top = 0;
+  if (map.height - top - bottom - 2 * FIT_PADDING < MIN_FREE_PX) bottom = 0;
+  return {
+    top: FIT_PADDING + top,
+    bottom: FIT_PADDING + bottom,
+    left: FIT_PADDING,
+    right: FIT_PADDING,
+  };
 }
 
 function collection(lines: MapLine[]) {
@@ -55,6 +85,7 @@ export function SearchMap({
   selectedId,
   selectedLine,
   fitKey,
+  overlays,
   flyTo,
   onViewChange,
   onSelect,
@@ -66,10 +97,10 @@ export function SearchMap({
   const fittedKey = useRef(0);
   const clusterMarkers = useRef<Marker[]>([]);
   const endMarkers = useRef<Marker[]>([]);
-  const handlers = useRef({ onViewChange, onSelect });
+  const handlers = useRef({ onViewChange, onSelect, overlays });
   const latest = useRef({ lines });
   useEffect(() => {
-    handlers.current = { onViewChange, onSelect };
+    handlers.current = { onViewChange, onSelect, overlays };
     latest.current = { lines };
   });
 
@@ -131,6 +162,12 @@ export function SearchMap({
       map.on("click", "lines-hit", (e: MapLayerMouseEvent) => {
         const id = e.features?.[0]?.properties?.id as string | undefined;
         if (id) handlers.current.onSelect(id);
+      });
+      // Клик в пустое место карты снимает выделение (маркеры кластеров и линии — не пустое).
+      map.on("click", (e) => {
+        if (e.originalEvent.target !== map.getCanvas()) return;
+        if (map.queryRenderedFeatures(e.point, { layers: ["lines-hit"] }).length > 0) return;
+        handlers.current.onSelect(null);
       });
       map.on("mouseenter", "lines-hit", () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", "lines-hit", () => (map.getCanvas().style.cursor = ""));
@@ -208,7 +245,12 @@ export function SearchMap({
     if (!map || fitKey === 0 || !selectedLine || fittedKey.current === fitKey) return;
     fittedKey.current = fitKey;
     const box = boundsOf(selectedLine);
-    if (box) map.fitBounds(box, { padding: 48, maxZoom: 16, duration: 0 });
+    if (!box) return;
+    const padding = fitPadding(
+      map.getContainer().getBoundingClientRect(),
+      handlers.current.overlays?.() ?? [],
+    );
+    map.fitBounds(box, { padding, maxZoom: 16, duration: 0 });
   }, [fitKey, selectedLine]);
 
   useEffect(() => {

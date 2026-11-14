@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CATEGORY_LABELS } from "../lib/format";
@@ -71,6 +71,10 @@ export function HomePage() {
   const [nearbyError, setNearbyError] = useState(false);
   // «Показать на карте»: при открытии с ?track=…&fit=1 карта подгоняется под трек один раз.
   const [fitKey, setFitKey] = useState(() => (params.get("track") && params.get("fit") ? 1 : 0));
+
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const overlays = useCallback(() => [filtersRef.current, bodyRef.current], []);
 
   const search = useTrackSearch(filters, viewport, limit);
   const selected = useTrack(selectedId ?? "", { enabled: Boolean(selectedId) });
@@ -163,6 +167,7 @@ export function HomePage() {
       <h1 className="visually-hidden">{t("search.title")}</h1>
       <aside className={`map-panel${listOpen ? " map-panel--open" : ""}`}>
         <div
+          ref={filtersRef}
           className={`map-panel__filters${filtersCollapsed ? " map-panel__filters--collapsed" : ""}`}
         >
           <button
@@ -258,7 +263,7 @@ export function HomePage() {
           </button>
         </div>
 
-        <div className="map-panel__body">
+        <div className="map-panel__body" ref={bodyRef}>
           <div className="list-head">
             <button
               type="button"
@@ -329,6 +334,7 @@ export function HomePage() {
           selectedId={selectedId}
           selectedLine={selected.data?.geometry?.coordinates ?? null}
           fitKey={selected.data ? fitKey : 0}
+          overlays={overlays}
           flyTo={flyTo}
           onViewChange={onViewChange}
           onSelect={select}
