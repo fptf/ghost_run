@@ -6,9 +6,10 @@ import { App } from "../App";
 
 export function renderApp(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={[path]}>
       <App queryClient={queryClient} />
     </MemoryRouter>,
   );
+  return { ...view, queryClient };
 }

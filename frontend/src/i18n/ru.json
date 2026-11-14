@@ -161,7 +161,8 @@
     "label": "Карта треков",
     "clusterLabel": "Треков здесь: {{count}}",
     "start": "Старт",
-    "finish": "Финиш"
+    "finish": "Финиш",
+    "deviation": "Место схода"
   },
   "search": {
     "placeholder": "Маршрут, автор или город",

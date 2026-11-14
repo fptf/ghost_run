@@ -4,8 +4,10 @@ import type { MultiPolygon, Polygon } from "geojson";
 import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { boundsOf, MAP_STYLE, markerEl } from "../lib/mapStyle";
+import { getHomeView } from "../search/homeView";
 
 type Coords = number[][];
 
@@ -53,7 +55,12 @@ function lineFeature(coords: Coords | null | undefined) {
 
 const FIT_PADDING = { top: 32, right: 48, bottom: 64, left: 32 };
 
+/**
+ * Карта пересоздаётся при смене любого пропа, поэтому объекты (`check`, `zone`, линии)
+ * должны быть стабильными между рендерами: данные запроса или useMemo у вызывающего.
+ */
 export function TrackMap({ line, fullLine, zone, kmMarks, check, label }: TrackMapProps) {
+  const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,6 +71,8 @@ export function TrackMap({ line, fullLine, zone, kmMarks, check, label }: TrackM
       boundsOf([...(fullLine ?? []), ...(line ?? []), ...(check?.mine ?? [])]) ??
       boundsOf(zoneRing ?? []);
     const el = container.current;
+    // Без линий и зоны (не бывает у обработанного трека) — исходная область главной карты.
+    const home = getHomeView();
 
     // Камера сразу в рамке трека: не грузим сначала тайлы всего мира.
     const map = new MapLibreMap({
@@ -71,7 +80,7 @@ export function TrackMap({ line, fullLine, zone, kmMarks, check, label }: TrackM
       style: MAP_STYLE,
       ...(box
         ? { bounds: box, fitBoundsOptions: { padding: FIT_PADDING, maxZoom: 16 } }
-        : { center: [37.62, 55.75] as [number, number], zoom: 9 }),
+        : { center: [home.lon, home.lat] as [number, number], zoom: home.z }),
       attributionControl: { compact: true },
       cooperativeGestures: true,
     });
@@ -161,7 +170,7 @@ export function TrackMap({ line, fullLine, zone, kmMarks, check, label }: TrackM
     });
 
     if (check?.deviation) {
-      new Marker({ element: markerEl("deviation-mark", "!", "место схода") })
+      new Marker({ element: markerEl("deviation-mark", "!", t("map.deviation")) })
         .setLngLat([check.deviation.lon, check.deviation.lat])
         .addTo(map);
     }
@@ -174,10 +183,10 @@ export function TrackMap({ line, fullLine, zone, kmMarks, check, label }: TrackM
     if (line?.length) {
       const first = line[0] as [number, number];
       const last = line[line.length - 1] as [number, number];
-      new Marker({ element: markerEl("end-mark end-mark--start", "", "старт") })
+      new Marker({ element: markerEl("end-mark end-mark--start", "", t("map.start")) })
         .setLngLat(first)
         .addTo(map);
-      new Marker({ element: markerEl("end-mark end-mark--finish", "", "финиш") })
+      new Marker({ element: markerEl("end-mark end-mark--finish", "", t("map.finish")) })
         .setLngLat(last)
         .addTo(map);
     }
@@ -189,7 +198,7 @@ export function TrackMap({ line, fullLine, zone, kmMarks, check, label }: TrackM
       resize.disconnect();
       map.remove();
     };
-  }, [line, fullLine, zone, kmMarks, check]);
+  }, [line, fullLine, zone, kmMarks, check, t]);
 
   return <div ref={container} className="track-map" role="img" aria-label={label} />;
 }
