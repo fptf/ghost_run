@@ -176,74 +176,98 @@ def _direction_share(r_xy: list[XY], seg_xy: list[XY], width: float) -> float:
     return ordered_covered / covered_any if covered_any else 0.0
 
 
-def match(route: Route, attempt: AttemptLine, cfg: MatchConfig) -> MatchResult:
-    lon0, lat0 = route.points[0]
-    proj = Projection.for_point(lat0, lon0)
-    r_xy = proj.to_xy([p[1] for p in route.points], [p[0] for p in route.points])
-    a_xy = proj.to_xy([p[1] for p in attempt.points], [p[0] for p in attempt.points])
-    a_t = [p[2] for p in attempt.points]
-    att = np.asarray(a_xy)
-    r_start, r_finish = r_xy[0], r_xy[-1]
-    r_cum = cumulative(r_xy)
-    visible_len = route.visible_to_m - route.visible_from_m
+@dataclass(frozen=True)
+class _Segment:
+    """Участок попытки, который сравнивается с маршрутом: индексы точек и зазоры у концов."""
+
+    i_s: int
+    i_f: int
+    start_gap_m: float
+    finish_gap_m: float
+    ordered: bool  # старт пройден раньше финиша
+
+
+def _is_loop(route: Route, r_start: XY, r_finish: XY, cfg: MatchConfig) -> bool:
     # Круговой — только целиком видимый маршрут. У круга от дома видна середина, её концы
     # на границе скрытой зоны тоже рядом, но попытка начинается у своего дома, а не там, —
     # такой маршрут сопоставляется как обычный участок с досчётом скрытых концов.
+    visible_len = route.visible_to_m - route.visible_from_m
     has_hidden_ends = visible_len < route.full_distance_m - 1.0
-    is_loop = dist(r_start, r_finish) < cfg.loop_threshold_m and not has_hidden_ends
+    return dist(r_start, r_finish) < cfg.loop_threshold_m and not has_hidden_ends
 
-    ordered = True
+
+def _find_segment(
+    a_xy: list[XY], r_start: XY, r_finish: XY, is_loop: bool, visible_len: float, cfg: MatchConfig
+) -> _Segment:
+    last = len(a_xy) - 1
     if is_loop:
         # 5.1: круговой маршрут не обрезается — сравнивается вся попытка.
-        i_s, i_f = 0, len(a_xy) - 1
-        start_gap, finish_gap = dist(a_xy[0], r_start), dist(a_xy[-1], r_finish)
-    else:
-        found = _segment(
-            att, cumulative(a_xy), r_start, r_finish, cfg.start_finish_radius_m, visible_len
-        )
-        if found is None:
-            # Нет пары «старт → финиш» по порядку: остальные правила считаем по всей попытке.
-            i_s, i_f = 0, len(a_xy) - 1
-            start_gap = float(np.min(np.hypot(att[:, 0] - r_start[0], att[:, 1] - r_start[1])))
-            finish_gap = float(np.min(np.hypot(att[:, 0] - r_finish[0], att[:, 1] - r_finish[1])))
-            ordered = False
-        else:
-            i_s, i_f, start_gap, finish_gap = found
-            ordered = True
+        return _Segment(0, last, dist(a_xy[0], r_start), dist(a_xy[-1], r_finish), True)
+    att = np.asarray(a_xy)
+    found = _segment(
+        att, cumulative(a_xy), r_start, r_finish, cfg.start_finish_radius_m, visible_len
+    )
+    if found is None:
+        # Нет пары «старт → финиш» по порядку: остальные правила считаем по всей попытке.
+        start_gap = float(np.min(np.hypot(att[:, 0] - r_start[0], att[:, 1] - r_start[1])))
+        finish_gap = float(np.min(np.hypot(att[:, 0] - r_finish[0], att[:, 1] - r_finish[1])))
+        return _Segment(0, last, start_gap, finish_gap, False)
+    i_s, i_f, start_gap, finish_gap = found
+    return _Segment(i_s, i_f, start_gap, finish_gap, True)
 
-    seg_xy = a_xy[i_s : i_f + 1] if i_f > i_s else a_xy
-    seg_line = LineString(seg_xy)
-    seg_len = cumulative(seg_xy)[-1]
-    seg_time = a_t[i_f] - a_t[i_s] if i_f > i_s else a_t[-1] - a_t[0]
-    att_len = cumulative(a_xy)[-1]
 
-    # Коридор: доля точек маршрута ближе corridor_width_m к линии участка.
+def _corridor(
+    route: Route, r_xy: list[XY], r_cum: list[float], seg_xy: list[XY], width: float
+) -> tuple[float, Deviation | None]:
+    """Коридор: доля точек маршрута ближе width к линии участка и первая точка вне его."""
     pts = shapely.points(np.asarray(r_xy))
-    gaps = shapely.distance(pts, seg_line)
-    covered = gaps <= cfg.corridor_width_m
+    gaps = shapely.distance(pts, LineString(seg_xy))
+    covered = gaps <= width
     coverage = float(np.mean(covered))
-    deviation = None
-    if not covered.all():
-        k = int(np.argmin(covered))  # первая точка маршрута вне коридора
-        lon, lat = route.points[k]
-        deviation = Deviation(lon=lon, lat=lat, km=(route.visible_from_m + r_cum[k]) / 1000)
+    if covered.all():
+        return coverage, None
+    k = int(np.argmin(covered))  # первая точка маршрута вне коридора
+    lon, lat = route.points[k]
+    return coverage, Deviation(lon=lon, lat=lat, km=(route.visible_from_m + r_cum[k]) / 1000)
 
-    direction_share = _direction_share(r_xy, seg_xy, cfg.corridor_width_m)
 
+def _length_ratio(seg_xy: list[XY], route_len: float) -> float:
     # Длины сравниваются по линиям с одинаковым шагом 10 м: дрожание GPS удлиняет сырой трек
     # по-разному на разных пробежках, а правило — про совпадение маршрута, а не шума.
     seg_smooth = _resample(seg_xy, 10.0)
     seg_smooth_len = (
         float(np.sum(np.hypot(*np.diff(seg_smooth, axis=0).T))) if len(seg_smooth) > 1 else 0.0
     )
-    length_ratio = seg_smooth_len / r_cum[-1] if r_cum[-1] > 0 else math.inf
+    return seg_smooth_len / route_len if route_len > 0 else math.inf
+
+
+def match(route: Route, attempt: AttemptLine, cfg: MatchConfig) -> MatchResult:
+    lon0, lat0 = route.points[0]
+    proj = Projection.for_point(lat0, lon0)
+    r_xy = proj.to_xy([p[1] for p in route.points], [p[0] for p in route.points])
+    a_xy = proj.to_xy([p[1] for p in attempt.points], [p[0] for p in attempt.points])
+    a_t = [p[2] for p in attempt.points]
+    r_start, r_finish = r_xy[0], r_xy[-1]
+    r_cum = cumulative(r_xy)
+    visible_len = route.visible_to_m - route.visible_from_m
+    is_loop = _is_loop(route, r_start, r_finish, cfg)
+    seg = _find_segment(a_xy, r_start, r_finish, is_loop, visible_len, cfg)
+    i_s, i_f = seg.i_s, seg.i_f
+
+    seg_xy = a_xy[i_s : i_f + 1] if i_f > i_s else a_xy
+    seg_len = cumulative(seg_xy)[-1]
+    seg_time = a_t[i_f] - a_t[i_s] if i_f > i_s else a_t[-1] - a_t[0]
+    att_len = cumulative(a_xy)[-1]
+    coverage, deviation = _corridor(route, r_xy, r_cum, seg_xy, cfg.corridor_width_m)
+    direction_share = _direction_share(r_xy, seg_xy, cfg.corridor_width_m)
+    length_ratio = _length_ratio(seg_xy, r_cum[-1])
     hidden_len = max(0.0, route.full_distance_m - visible_len)
     pace = seg_time / seg_len if seg_len > 0 else 0.0
     hidden_time = hidden_len * pace
 
     radius = cfg.start_finish_radius_m
-    start_ok = start_gap <= radius
-    finish_ok = finish_gap <= radius
+    start_ok = seg.start_gap_m <= radius
+    finish_ok = seg.finish_gap_m <= radius
     coverage_ok = coverage >= cfg.corridor_coverage
     direction_ok = direction_share >= cfg.direction_min_share
     length_ok = abs(length_ratio - 1) <= cfg.length_tolerance
@@ -253,14 +277,14 @@ def match(route: Route, attempt: AttemptLine, cfg: MatchConfig) -> MatchResult:
         and coverage_ok
         and direction_ok
         and length_ok
-        and (is_loop or ordered)
+        and (is_loop or seg.ordered)
     )
     return MatchResult(
         matched=matched,
         is_loop=is_loop,
         trimmed=seg_len < att_len * 0.99,
-        start_gap_m=start_gap,
-        finish_gap_m=finish_gap,
+        start_gap_m=seg.start_gap_m,
+        finish_gap_m=seg.finish_gap_m,
         start_ok=start_ok,
         finish_ok=finish_ok,
         coverage=coverage,

@@ -3,6 +3,7 @@
 import uuid
 from typing import Any, Literal, Self
 
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.infra.models import Achievement, Track, User
@@ -56,3 +57,26 @@ class RootRef(BaseModel):
 def root_ref(root: Track, user: User) -> RootRef:
     """Ссылка на маршрут (исходный трек) с автором."""
     return RootRef(id=root.id, title=root.title, author=author_of(user))
+
+
+class Photo(BaseModel):
+    id: uuid.UUID
+    url: str
+
+
+def photo_url(track_id: uuid.UUID, photo_id: uuid.UUID) -> str:
+    return f"/tracks/{track_id}/photos/{photo_id}"
+
+
+class UploadError(BaseModel):
+    code: str
+    detail: str
+    track_id: uuid.UUID | None = None
+    retry_after_s: int | None = None
+
+
+def error_response(status_code: int, code: str, detail: str, **extra: Any) -> JSONResponse:
+    """Ошибка загрузки файла (трека или фото) с машинным кодом."""
+    body = UploadError(code=code, detail=detail, **extra).model_dump(mode="json")
+    headers = {"Retry-After": str(extra["retry_after_s"])} if extra.get("retry_after_s") else None
+    return JSONResponse(status_code=status_code, content=body, headers=headers)
